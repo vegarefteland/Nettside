@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/nextlevelbuilder/ui-ux-pro-max-skill/main/.claude/skills/ui-ux-pro-max/SKILL.md\" -o ~/.claude/skills/ui-ux-pro-max/SKILL.md)",
+      "WebFetch(domain:theodorhaugen.xyz)",
+      "Bash(python3 ~/.claude/skills/ui-ux-pro-max/scripts/search.py \"minimal portfolio graphic designer photography dark monochrome\" --design-system)",
+      "Read(//usr/local/**)",
+      "Read(//opt/homebrew/bin/**)",
+      "Bash(/usr/bin/python3 --version)",
+      "Bash(/usr/bin/python3 -c \"import http.server; print\\('ok'\\)\")",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(open /Users/vegarefteland/Desktop/nettside/index.html)",
+      "WebFetch(domain:vegarem.no)",
+      "Bash(python3 /Users/vegarefteland/.claude/skills/ui-ux-pro-max/scripts/search.py \"graphic design portfolio minimal elegant monochrome\" --design-system -p \"Theodor Haugen Portfolio\")",
+      "Bash(curl -sL \"https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/610f35bf-ce1e-4beb-b58c-474a976994d5_rwc_0x0x833x651x32.gif\" -o images/projects/01/cover.jpg)",
+      "Bash(curl -sL \"https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/481a19ac-bb53-47d0-8e4c-87b1f5a27d0d_rwc_0x0x833x651x32.png\" -o images/projects/01/01.jpg)",
+      "Bash(curl -sL \"https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/615425ca-5521-4c53-9d93-1efaebf87df8_rwc_2721x53x833x652x32.png\" -o images/projects/02/cover.jpg)",
+      "Bash(curl -sL \"https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/615425ca-5521-4c53-9d93-1efaebf87df8_rwc_2721x53x833x652x32.png\" -o images/projects/02/01.jpg)",
+      "Bash(curl -sL \"https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/8c00eccf-b792-4dd9-b767-8abb9e1f86fc_rwc_0x0x833x651x32.gif\" -o images/projects/03/cover.jpg)",
+      "Bash(xargs ls:*)",
+      "Bash(curl -sL \"https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/610f35bf-ce1e-4beb-b58c-474a976994d5_rwc_0x0x833x651x32.gif?h=693ce4748ae7ffb8e3b7a8e49c6c70a4\" -o images/projects/01/cover.jpg)",
+      "Bash(curl -sL \"https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/481a19ac-bb53-47d0-8e4c-87b1f5a27d0d_rwc_0x0x833x651x32.png?h=793f63a1da46d04fff1d521880d7fb7c\" -o images/projects/01/01.jpg)",
+      "Bash(curl -sL \"https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/615425ca-5521-4c53-9d93-1efaebf87df8_rwc_2721x53x833x652x32.png?h=0ce4fcd98a781525734bfdda75f726ae\" -o images/projects/02/cover.jpg)",
+      "Bash(curl -sL \"https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/615425ca-5521-4c53-9d93-1efaebf87df8_rwc_2721x53x833x652x32.png?h=0ce4fcd98a781525734bfdda75f726ae\" -o images/projects/02/01.jpg)",
+      "Bash(curl -sL \"https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/8c00eccf-b792-4dd9-b767-8abb9e1f86fc_rwc_0x0x833x651x32.gif?h=fc9ef561fefac02c9315347454f61c95\" -o images/projects/03/cover.jpg)"
+    ]
+  }
+}

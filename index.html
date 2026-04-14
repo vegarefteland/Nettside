@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vegar Efteland</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ─── Reset ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    img { display: block; }
+    a { text-decoration: none; }
+
+    /* ─── Tokens ─────────────────────────────────────────────── */
+    :root {
+      --bg:         #ffffff;
+      --fg:         #0a0a0a;
+      --muted:      #999999;
+      --border:     #e8e8e8;
+      --tag-bg:     #0a0a0a;
+      --tag-fg:     #ffffff;
+      --nav-bg:     rgba(255, 255, 255, 0.88);
+      --placeholder:#d4d4d4;
+      --gap:        6px;
+      --font:       'Space Grotesk', system-ui, -apple-system, sans-serif;
+      --ease-out:   cubic-bezier(0.22, 1, 0.36, 1);
+      --ease-in:    cubic-bezier(0.4, 0, 1, 1);
+    }
+
+    /* ─── Base ───────────────────────────────────────────────── */
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--font);
+      font-size: 16px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ─── Pages ──────────────────────────────────────────────── */
+    .page {
+      display: none;
+      min-height: 100vh;
+      padding: 72px 20px 40px;
+      animation: pageIn 320ms var(--ease-out) both;
+    }
+    .page.active { display: block; }
+
+    @keyframes pageIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .page, .project-card img, .archive-img img,
+      .project-arrow, .project-card::after { transition: none !important; animation: none !important; }
+    }
+
+    /* ─── Top Nav ────────────────────────────────────────────── */
+    .top-nav {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 200;
+      pointer-events: none;
+    }
+
+    .nav-pill {
+      background: var(--nav-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(0, 0, 0, 0.07);
+      border-radius: 100px;
+      padding: 8px 18px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      pointer-events: all;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 600px) {
+      .nav-pill-center { display: none; }
+    }
+
+    .nav-pill-name {
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--fg);
+      user-select: none;
+    }
+
+    .nav-pill a {
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--muted);
+      transition: color 180ms ease;
+      cursor: pointer;
+    }
+    .nav-pill a.active { color: var(--fg); }
+    .nav-pill a:hover  { color: var(--fg); }
+    .nav-pill a:focus-visible {
+      outline: 2px solid var(--fg);
+      outline-offset: 3px;
+      border-radius: 4px;
+    }
+
+    /* ─── ── HOME PAGE ─────────────────────────────────────────── */
+    .project-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--gap);
+    }
+
+    @media (max-width: 900px) {
+      .project-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 550px) {
+      .project-grid { grid-template-columns: 1fr; }
+    }
+
+    .project-card {
+      position: relative;
+      aspect-ratio: 4 / 3;
+      overflow: hidden;
+      cursor: pointer;
+      background: var(--placeholder);
+      border-radius: 6px;
+    }
+
+    .project-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 550ms var(--ease-out);
+    }
+
+    .project-card:hover img {
+      transform: scale(1.04);
+    }
+
+    /* Label – top left */
+    .project-label {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: var(--tag-bg);
+      color: var(--tag-fg);
+      font-size: 12.5px;
+      font-weight: 500;
+      padding: 4px 11px;
+      border-radius: 100px;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    /* Arrow – top right (always visible) */
+    .project-arrow {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 30px;
+      height: 30px;
+      background: var(--tag-bg);
+      color: var(--tag-fg);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      pointer-events: none;
+      transition: transform 250ms var(--ease-out), opacity 250ms ease;
+    }
+
+    .project-arrow svg {
+      width: 13px;
+      height: 13px;
+    }
+
+    /* subtle dim overlay on hover to separate label */
+    .project-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0);
+      transition: background 300ms ease;
+      pointer-events: none;
+    }
+    .project-card:hover::after {
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    /* ─── ── ABOUT PAGE ────────────────────────────────────────── */
+    .about-wrap {
+      max-width: 480px;
+      padding-top: 8px;
+    }
+
+    .section-tag {
+      display: inline-block;
+      background: var(--tag-bg);
+      color: var(--tag-fg);
+      font-size: 12.5px;
+      font-weight: 500;
+      padding: 4px 12px;
+      border-radius: 100px;
+      margin-bottom: 18px;
+    }
+
+    .about-bio {
+      font-size: 16px;
+      line-height: 1.65;
+      margin-bottom: 40px;
+      color: var(--fg);
+    }
+
+    .section-block {
+      margin-bottom: 36px;
+    }
+
+    .entry {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 5px;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .entry-year {
+      color: var(--muted);
+      min-width: 100px;
+      flex-shrink: 0;
+    }
+
+    .entry-name {
+      font-weight: 500;
+    }
+
+    .entry-link {
+      color: var(--fg);
+      border-bottom: 1px solid var(--fg);
+      padding-bottom: 1px;
+      transition: opacity 180ms ease;
+    }
+    .entry-link:hover { opacity: 0.5; }
+
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px 40px;
+    }
+
+    .contact-item .ci-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--fg);
+      margin-bottom: 3px;
+    }
+
+    .contact-item a {
+      font-size: 14.5px;
+      color: var(--fg);
+      transition: opacity 180ms ease;
+    }
+    .contact-item a:hover { opacity: 0.5; }
+
+    .about-footer {
+      margin-top: 64px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      font-size: 12.5px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    /* ─── ── ARCHIVE PAGE ──────────────────────────────────────── */
+    .archive-intro {
+      font-size: 15px;
+      font-weight: 500;
+      max-width: 580px;
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    .archive-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: var(--gap);
+    }
+
+    @media (max-width: 1100px) {
+      .archive-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .archive-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 480px) {
+      .archive-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .archive-img {
+      overflow: hidden;
+      background: var(--placeholder);
+      border-radius: 6px;
+      aspect-ratio: 1 / 1;
+    }
+    .archive-img.wide  { grid-column: span 2; }
+    .archive-img.tall  { grid-row: span 2; }
+    .archive-img.big   { grid-column: span 2; grid-row: span 2; }
+
+    .archive-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 500ms var(--ease-out);
+    }
+    .archive-img:hover img { transform: scale(1.04); }
+
+    /* colored placeholder blocks */
+    .ph { width: 100%; height: 100%; }
+
+    /* Stagger animation for archive items */
+    .archive-img {
+      animation: archiveIn 400ms var(--ease-out) both;
+    }
+    .archive-img:nth-child(1)  { animation-delay: 30ms; }
+    .archive-img:nth-child(2)  { animation-delay: 60ms; }
+    .archive-img:nth-child(3)  { animation-delay: 90ms; }
+    .archive-img:nth-child(4)  { animation-delay: 120ms; }
+    .archive-img:nth-child(5)  { animation-delay: 150ms; }
+    .archive-img:nth-child(6)  { animation-delay: 180ms; }
+    .archive-img:nth-child(7)  { animation-delay: 210ms; }
+    .archive-img:nth-child(8)  { animation-delay: 240ms; }
+    .archive-img:nth-child(9)  { animation-delay: 270ms; }
+    .archive-img:nth-child(10) { animation-delay: 300ms; }
+    .archive-img:nth-child(11) { animation-delay: 330ms; }
+    .archive-img:nth-child(12) { animation-delay: 360ms; }
+    .archive-img:nth-child(13) { animation-delay: 390ms; }
+    .archive-img:nth-child(14) { animation-delay: 420ms; }
+    .archive-img:nth-child(15) { animation-delay: 450ms; }
+    .archive-img:nth-child(16) { animation-delay: 480ms; }
+    .archive-img:nth-child(17) { animation-delay: 510ms; }
+    .archive-img:nth-child(18) { animation-delay: 540ms; }
+
+    @keyframes archiveIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── Lightbox ───────────────────────────────────────────── */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 250ms ease;
+    }
+    .lightbox.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .lightbox img,
+    #lightbox-color {
+      max-width: min(90vw, 1000px);
+      max-height: 88vh;
+      object-fit: contain;
+      border-radius: 6px;
+      transform: scale(0.93);
+      transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+      box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+    }
+    #lightbox-color {
+      width: min(90vw, 600px);
+      height: min(90vw, 600px);
+    }
+    .lightbox.open img,
+    .lightbox.open #lightbox-color {
+      transform: scale(1);
+    }
+    .lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 36px;
+      height: 36px;
+      background: rgba(255,255,255,0.12);
+      border: none;
+      border-radius: 50%;
+      color: #fff;
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 180ms ease;
+    }
+    .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+
+    .archive-img { cursor: zoom-in; }
+
+    /* ─── Project Detail Page ────────────────────────────────── */
+    .project-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 40px;
+      align-items: start;
+    }
+
+    .project-left {
+      position: sticky;
+      top: 72px;
+    }
+
+    .project-left .section-tag {
+      display: inline-block;
+      margin-bottom: 16px;
+    }
+
+    .project-desc {
+      font-size: 15px;
+      line-height: 1.75;
+      color: var(--fg);
+    }
+
+    .project-desc p + p {
+      margin-top: 14px;
+    }
+
+    .project-right {
+      display: flex;
+      flex-direction: column;
+      gap: var(--gap);
+    }
+
+    .project-hero {
+      width: 100%;
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--placeholder);
+    }
+
+    .project-hero img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .project-img-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--gap);
+      align-items: start;
+    }
+
+    .project-img-item {
+      background: var(--placeholder);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .project-img-item img,
+    .project-img-item video,
+    .project-hero img,
+    .project-hero video {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .video-wrap {
+      position: relative;
+      width: 100%;
+    }
+
+    .mute-btn {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: none;
+      border-radius: 100px;
+      color: #fff;
+      font-size: 12px;
+      font-family: var(--font);
+      font-weight: 500;
+      padding: 5px 11px 5px 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: background 180ms ease;
+      z-index: 10;
+    }
+    .mute-btn:hover { background: rgba(0, 0, 0, 0.75); }
+    .mute-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+    .volume-wrap {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border-radius: 100px;
+      padding: 5px 11px;
+      z-index: 10;
+    }
+
+    .volume-wrap svg { width: 14px; height: 14px; color: #fff; flex-shrink: 0; }
+
+    .volume-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 70px;
+      height: 3px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.35);
+      outline: none;
+      cursor: pointer;
+    }
+    .volume-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+    }
+    .volume-slider::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #fff;
+      border: none;
+      cursor: pointer;
+    }
+
+    @media (max-width: 860px) {
+      .project-layout {
+        grid-template-columns: 1fr;
+      }
+      .project-left { position: static; }
+    }
+
+    /* ─── Stagger for project grid ───────────────────────────── */
+    .project-card { animation: cardIn 380ms var(--ease-out) both; }
+    .project-card:nth-child(1) { animation-delay: 0ms; }
+    .project-card:nth-child(2) { animation-delay: 40ms; }
+    .project-card:nth-child(3) { animation-delay: 80ms; }
+    .project-card:nth-child(4) { animation-delay: 120ms; }
+    .project-card:nth-child(5) { animation-delay: 160ms; }
+    .project-card:nth-child(6) { animation-delay: 200ms; }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes ring {
+      0%   { transform: rotate(0deg); }
+      15%  { transform: rotate(8deg); }
+      32%  { transform: rotate(-7deg); }
+      48%  { transform: rotate(5deg); }
+      62%  { transform: rotate(-4deg); }
+      75%  { transform: rotate(2deg); }
+      88%  { transform: rotate(-1deg); }
+      100% { transform: rotate(0deg); }
+    }
+
+    .project-card:hover .project-arrow svg {
+      animation: ring 0.7s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+      transform-origin: center;
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       HOME PAGE — Project grid
+       To add/remove projects: edit the PROJECTS array in the script.
+       ══════════════════════════════════════════════════════════════ -->
+  <main id="page-home" class="page active" role="main">
+    <div class="project-grid" id="project-grid"></div>
+  </main>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       ABOUT PAGE
+       Edit the content below directly in the HTML.
+       ══════════════════════════════════════════════════════════════ -->
+  <section id="page-about" class="page" aria-label="About">
+    <div class="about-wrap">
+
+      <span class="section-tag">About</span>
+      <!-- ↓ Edit your bio here ↓ -->
+      <p class="about-bio">
+        I'm Vegar, a graphic designer and visual communicator based in Norway.
+        I work across brand identity, motion, and digital design — driven by a
+        curiosity for systems, visual language, and how design shapes experience.
+      </p>
+
+      <div class="section-block">
+        <span class="section-tag">Currently</span>
+        <!-- ↓ Edit current role ↓ -->
+        <div class="entry">
+          <span class="entry-year">2024 –</span>
+          <span class="entry-name">Freelance Designer</span>
+        </div>
+      </div>
+
+      <div class="section-block">
+        <span class="section-tag">Previously</span>
+        <!-- ↓ Edit past roles ↓ -->
+        <div class="entry">
+          <span class="entry-year">2023</span>
+          <span class="entry-name">Poster Design Projects</span>
+        </div>
+        <div class="entry">
+          <span class="entry-year">2022 – 2023</span>
+          <span class="entry-name">Motion Graphics &amp; 3D</span>
+        </div>
+        <div class="entry">
+          <span class="entry-year">2021</span>
+          <span class="entry-name">Personal Branding Work</span>
+        </div>
+      </div>
+
+      <div class="section-block">
+        <span class="section-tag">Recognition</span>
+        <!-- ↓ Edit awards ↓ -->
+        <div class="entry">
+          <span class="entry-year">2024</span>
+          <span class="entry-name">
+            <a class="entry-link" href="https://vegarem.no" target="_blank" rel="noopener">F1 Merch Design↗</a>
+          </span>
+        </div>
+      </div>
+
+      <div class="section-block">
+        <span class="section-tag">Contact</span>
+        <!-- ↓ Edit contact info ↓ -->
+        <div class="contact-grid">
+          <div class="contact-item">
+            <p class="ci-label">Mail</p>
+            <a href="mailto:vegarefteland@gmail.com">vegarefteland@gmail.com</a>
+          </div>
+          <div class="contact-item">
+            <p class="ci-label">Instagram</p>
+            <a href="https://instagram.com" target="_blank" rel="noopener">@vegarem</a>
+          </div>
+          <div class="contact-item">
+            <p class="ci-label">LinkedIn</p>
+            <a href="https://linkedin.com" target="_blank" rel="noopener">vegar-efteland</a>
+          </div>
+          <div class="contact-item">
+            <p class="ci-label">Website</p>
+            <a href="https://vegarem.no" target="_blank" rel="noopener">vegarem.no</a>
+          </div>
+        </div>
+      </div>
+
+      <footer class="about-footer">
+        <!-- ↓ Edit footer ↓ -->
+        Copyright ©2025 Vegar Efteland, All rights reserved
+      </footer>
+
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       ARCHIVE PAGE
+       To add archive images: edit the ARCHIVE array in the script.
+       ══════════════════════════════════════════════════════════════ -->
+  <section id="page-archive" class="page" aria-label="Archive">
+    <p class="archive-intro">
+      A selection of smaller projects, discarded ideas, outtakes, tests
+      and other documentation from the past few years.
+    </p>
+    <div class="archive-grid" id="archive-grid"></div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       PROJECT DETAIL PAGE — populated dynamically by JS
+       ══════════════════════════════════════════════════════════════ -->
+  <div id="page-project" class="page" aria-label="Project"></div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
+    <button class="lightbox-close" id="lightbox-close" aria-label="Close">✕</button>
+    <img id="lightbox-img" src="" alt="" style="display:none">
+    <div id="lightbox-color" style="display:none; width:min(90vw,600px); height:min(90vw,600px); border-radius:6px;"></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       FLOATING NAV
+       ══════════════════════════════════════════════════════════════ -->
+  <nav class="top-nav" aria-label="Primary navigation">
+    <div class="nav-pill" id="nav-left"></div>
+    <div class="nav-pill nav-pill-center"><span class="nav-pill-name">Vegar Efteland Melhus</span></div>
+    <div class="nav-pill" id="nav-right"></div>
+  </nav>
+
+
+  <script>
+    /* ════════════════════════════════════════════════════════════════
+     * SITE CONFIG — Edit everything here to update the portfolio
+     * ════════════════════════════════════════════════════════════════ */
+    const SITE = {
+      name: "Vegar Efteland",       // ← Your name (shown in nav on home page)
+
+      /* ── Projects ──────────────────────────────────────────────────
+       * image: URL or relative path  e.g. "images/projects/f1-team.jpg"
+       * url:   where the arrow links to (set to "" to disable)
+       * ──────────────────────────────────────────────────────────── */
+      /* ── Projects ────────────────────────────────────────────────
+       * cover:       grid thumbnail  → images/projects/01/cover.jpg
+       * folder:      subfolder name  → images/projects/01/
+       * Images inside folder: 01.jpg (hero), 02.jpg, 03.jpg … 09.jpg
+       * description: shown on project page (use \n for paragraph break)
+       * ──────────────────────────────────────────────────────────── */
+      projects: [
+        {
+          title: "F1 – Team Merch",
+          folder: "01",
+          cover: "images/projects/01/cover.jpg",
+          color: "#C8B8A2",
+          description: "Edit this description in index.html under SITE.projects.\n\nDescribe the project, your role, the brief, and what makes it interesting.",
+        },
+        {
+          title: "F1 – Track Merch",
+          folder: "02",
+          cover: "images/projects/02/cover.jpg",
+          color: "#1C1C1E",
+          description: "Edit this description in index.html under SITE.projects.\n\nDescribe the project, your role, the brief, and what makes it interesting.",
+        },
+        {
+          title: "Poster Design",
+          folder: "03",
+          cover: "images/projects/03/cover.jpg",
+          color: "#E8E0D5",
+          layout: "grid",  // 2-column grid for all images
+          description: "Edit this description in index.html under SITE.projects.\n\nDescribe the project, your role, the brief, and what makes it interesting.",
+        },
+        {
+          title: "3D Modeling",
+          folder: "04",
+          cover: "images/projects/04/cover.jpg",
+          color: "#3D4A5C",
+          description: "Edit this description in index.html under SITE.projects.\n\nDescribe the project, your role, the brief, and what makes it interesting.",
+        },
+        {
+          title: "Motion Graphics",
+          folder: "05",
+          cover: "images/projects/05/cover.jpg",
+          color: "#D4C5B0",
+          description: "Edit this description in index.html under SITE.projects.\n\nDescribe the project, your role, the brief, and what makes it interesting.",
+        },
+        {
+          title: "Personal Branding",
+          folder: "06",
+          cover: "images/projects/06/cover.jpg",
+          color: "#F0EBE3",
+          description: "Edit this description in index.html under SITE.projects.\n\nDescribe the project, your role, the brief, and what makes it interesting.",
+        },
+      ],
+
+      /* ── Archive items ─────────────────────────────────────────────
+       * image:  URL or relative path, or "" for a color placeholder
+       * color:  CSS color used when image is ""
+       * span:   "wide" | "tall" | "big" | "" for normal
+       * ──────────────────────────────────────────────────────────── */
+      archive: [
+        { image: "https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/481a19ac-bb53-47d0-8e4c-87b1f5a27d0d_rwc_0x0x833x651x32.png" },
+        { image: "https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/d2d5ade0-65b9-4834-acbd-793ebebb09fb_rwc_0x724x1920x1501x32.png" },
+        { image: "",  color: "#4A90E2" },
+        { image: "",  color: "#1a1a1a" },
+        { image: "",  color: "#E8D5B7" },
+        { image: "https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/a7f2e192-ef0b-4b09-b308-74844a2b8bd9_rwc_0x0x833x651x32.png" },
+        { image: "",  color: "#F2E8FF" },
+        { image: "",  color: "#111111" },
+        { image: "https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/26c1bd1c-ddfb-4b27-8c0e-294607985bad_rwc_102x0x1181x924x32.png" },
+        { image: "",  color: "#C8E6C9" },
+        { image: "",  color: "#FFE082" },
+        { image: "https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/16ea41c9-bc47-42da-8d4d-7b28d5ecaa50_rwc_649x0x1699x1329x32.jpg" },
+        { image: "",  color: "#FF7043" },
+        { image: "",  color: "#e0e0e0" },
+        { image: "https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/615425ca-5521-4c53-9d93-1efaebf87df8_rwc_2721x53x833x652x32.png" },
+        { image: "",  color: "#263238" },
+        { image: "",  color: "#d4d4d4" },
+        { image: "",  color: "#f5f5f5" },
+      ],
+    };
+
+    /* ════════════════════════════════════════════════════════════════
+     * NAVIGATION
+     * ════════════════════════════════════════════════════════════════ */
+    const pages = [
+      { id: "home",    label: "Home" },
+      { id: "about",   label: "About" },
+      { id: "archive", label: "Archive" },
+    ];
+
+    let currentPage    = "home";
+    let currentProject = null;
+
+    function showPage(pageId) {
+      const old = document.getElementById("page-" + currentPage);
+      if (old) { old.classList.remove("active"); old.style.display = "none"; }
+      currentPage = pageId;
+      const next = document.getElementById("page-" + currentPage);
+      next.style.display = "";
+      void next.offsetWidth;
+      next.classList.add("active");
+      renderNav();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function navigate(pageId) {
+      if (pageId === currentPage && pageId !== "project") return;
+      currentProject = null;
+      showPage(pageId);
+    }
+
+    function openProject(project) {
+      currentProject = project;
+      renderProjectPage(project);
+      showPage("project");
+    }
+
+    function renderProjectPage(project) {
+      const page = document.getElementById("page-project");
+
+      // Build description paragraphs
+      const paragraphs = project.description
+        .split("\n")
+        .filter(p => p.trim())
+        .map(p => `<p>${p}</p>`)
+        .join("");
+
+      page.innerHTML = `
+        <div class="project-layout">
+          <div class="project-left">
+            <span class="section-tag">Description</span>
+            <div class="project-desc">${paragraphs}</div>
+          </div>
+          <div class="project-right" id="project-right"></div>
+        </div>
+      `;
+
+      const right = document.getElementById("project-right");
+
+      // Hero layout (default): first image full width, rest in 2-col grid
+      // Grid layout: all images in 2-col grid (set layout: "grid" in SITE.projects)
+      let container;
+      if (project.layout === "grid") {
+        container = document.createElement("div");
+        container.className = "project-img-grid";
+        right.appendChild(container);
+      } else {
+        const hero = document.createElement("div");
+        hero.className = "project-hero";
+        hero.style.background = project.color;
+        right.appendChild(hero);
+        container = hero; // first image goes into hero
+      }
+
+      let grid = null;
+
+      for (let i = 1; i <= 9; i++) {
+        const num = String(i).padStart(2, "0");
+        const mp4 = `images/projects/${project.folder}/${num}.mp4`;
+        const jpg = `images/projects/${project.folder}/${num}.jpg`;
+
+        // For hero layout: first image into hero, rest into a grid below
+        let target;
+        if (project.layout === "grid") {
+          target = container;
+        } else if (i === 1) {
+          target = container; // hero div
+        } else {
+          if (!grid) {
+            grid = document.createElement("div");
+            grid.className = "project-img-grid";
+            right.appendChild(grid);
+          }
+          target = grid;
+        }
+
+        const item = document.createElement("div");
+        item.className = project.layout === "grid" || i > 1 ? "project-img-item" : "";
+        item.style.background = project.color;
+
+        const video = document.createElement("video");
+        video.autoplay = true;
+        video.muted = true;
+        video.loop = true;
+        video.setAttribute("playsinline", "");
+        video.setAttribute("preload", "metadata");
+
+        video.addEventListener("error", function () {
+          wrap.remove();
+          const img = document.createElement("img");
+          img.alt = i === 1 ? project.title : "";
+          img.src = jpg;
+          img.onerror = () => item.remove();
+          item.appendChild(img);
+        });
+
+        video.src = mp4;
+
+        // Mute button
+        const muteBtn = document.createElement("button");
+        muteBtn.className = "mute-btn";
+        muteBtn.setAttribute("aria-label", "Unmute");
+
+        const iconMuted = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>`;
+        const iconSound = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`;
+
+        muteBtn.innerHTML = iconMuted + "Sound";
+
+        muteBtn.addEventListener("click", () => {
+          video.muted = !video.muted;
+          muteBtn.innerHTML = video.muted
+            ? iconMuted + "Sound"
+            : iconSound + "Mute";
+          muteBtn.setAttribute("aria-label", video.muted ? "Unmute" : "Mute");
+        });
+
+        // Volume slider (left side)
+        const volWrap = document.createElement("div");
+        volWrap.className = "volume-wrap";
+
+        const iconPlay  = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+        const iconPause = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
+
+        const playBtn = document.createElement("button");
+        playBtn.className = "mute-btn";
+        playBtn.style.cssText = "position:static;background:none;padding:0;backdrop-filter:none;";
+        playBtn.innerHTML = iconPause;
+        playBtn.setAttribute("aria-label", "Pause");
+
+        playBtn.addEventListener("click", () => {
+          if (video.paused) {
+            video.play();
+            playBtn.innerHTML = iconPause;
+            playBtn.setAttribute("aria-label", "Pause");
+          } else {
+            video.pause();
+            playBtn.innerHTML = iconPlay;
+            playBtn.setAttribute("aria-label", "Play");
+          }
+        });
+
+        volWrap.appendChild(playBtn);
+
+        const volIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        volIcon.setAttribute("viewBox", "0 0 24 24");
+        volIcon.setAttribute("fill", "none");
+        volIcon.setAttribute("stroke", "currentColor");
+        volIcon.setAttribute("stroke-width", "2");
+        volIcon.setAttribute("stroke-linecap", "round");
+        volIcon.setAttribute("stroke-linejoin", "round");
+        volIcon.innerHTML = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>`;
+        volWrap.appendChild(volIcon);
+
+        const slider = document.createElement("input");
+        slider.type = "range";
+        slider.className = "volume-slider";
+        slider.min = 0;
+        slider.max = 1;
+        slider.step = 0.01;
+        slider.value = 0; // starts muted
+        slider.setAttribute("aria-label", "Volume");
+
+        slider.addEventListener("input", () => {
+          video.volume = slider.value;
+          video.muted = slider.value == 0;
+          muteBtn.innerHTML = video.muted
+            ? iconMuted + "Sound"
+            : iconSound + "Mute";
+        });
+
+        // Keep slider in sync when mute button is toggled
+        muteBtn.addEventListener("click", () => {
+          slider.value = video.muted ? 0 : 1;
+        }, true);
+
+        volWrap.appendChild(slider);
+
+        const wrap = document.createElement("div");
+        wrap.className = "video-wrap";
+        wrap.appendChild(video);
+        wrap.appendChild(volWrap);
+        wrap.appendChild(muteBtn);
+        item.appendChild(wrap);
+        target.appendChild(item);
+      }
+    }
+
+    function makeNavLink(id, label) {
+      const a = document.createElement("a");
+      a.textContent = label;
+      a.setAttribute("href", "#");
+      a.setAttribute("role", "button");
+      a.setAttribute("aria-current", id === currentPage ? "page" : "false");
+      if (id === currentPage) a.classList.add("active");
+      a.addEventListener("click", e => { e.preventDefault(); navigate(id); });
+      a.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(id); }
+      });
+      return a;
+    }
+
+    function renderNav() {
+      const left   = document.getElementById("nav-left");
+      const right  = document.getElementById("nav-right");
+      const center = document.querySelector(".nav-pill-name");
+      left.innerHTML  = "";
+      right.innerHTML = "";
+
+      if (currentPage === "project" && currentProject) {
+        center.textContent = currentProject.title;
+        left.appendChild(makeNavLink("home", "← Home"));
+      } else {
+        center.textContent = "Vegar Efteland Melhus";
+        left.appendChild(makeNavLink("home", "Home"));
+      }
+
+      right.appendChild(makeNavLink("about", "About"));
+      right.appendChild(makeNavLink("archive", "Archive"));
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+     * RENDER PROJECT GRID
+     * ════════════════════════════════════════════════════════════════ */
+    function renderProjects() {
+      const grid = document.getElementById("project-grid");
+      SITE.projects.forEach(project => {
+        const card = document.createElement("div");
+        card.className = "project-card";
+        card.setAttribute("tabindex", "0");
+        card.setAttribute("role", "article");
+        card.setAttribute("aria-label", project.title);
+        if (project.color) card.style.background = project.color;
+
+        const label = document.createElement("span");
+        label.className = "project-label";
+        label.textContent = project.title;
+
+        const arrow = document.createElement("div");
+        arrow.className = "project-arrow";
+        arrow.setAttribute("aria-hidden", "true");
+        arrow.innerHTML = `<svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 10L10 2M10 2H4M10 2V8" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>`;
+
+        const img = document.createElement("img");
+        img.src = project.cover;
+        img.alt = project.title;
+        img.loading = "lazy";
+        img.width = 800;
+        img.height = 600;
+        img.onerror = function () {
+          this.style.display = "none";
+        };
+
+        card.appendChild(img);
+        card.appendChild(label);
+        card.appendChild(arrow);
+
+        card.style.cursor = "pointer";
+        card.addEventListener("click", () => openProject(project));
+        card.addEventListener("keydown", e => {
+          if (e.key === "Enter") openProject(project);
+        });
+
+        grid.appendChild(card);
+      });
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+     * RENDER ARCHIVE GRID
+     * Auto-loads images/archive/01.jpg → 99.jpg
+     * Just drop numbered files in the folder — no code changes needed.
+     * ════════════════════════════════════════════════════════════════ */
+    function renderArchive() {
+      const grid = document.getElementById("archive-grid");
+      let loaded = 0;
+
+      for (let i = 1; i <= 99; i++) {
+        const num  = String(i).padStart(2, "0");
+        const src  = `images/archive/${num}.jpg`;
+
+        const cell = document.createElement("div");
+        cell.className = "archive-img";
+
+        const img = document.createElement("img");
+        img.alt = "";
+        img.setAttribute("aria-hidden", "true");
+
+        img.onerror = function () {
+          cell.remove();
+        };
+
+        img.src = src;
+        cell.appendChild(img);
+        cell.addEventListener("click", () => openLightbox(src, "#d4d4d4"));
+        grid.appendChild(cell);
+      }
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+     * LIGHTBOX
+     * ════════════════════════════════════════════════════════════════ */
+    const lightbox     = document.getElementById("lightbox");
+    const lightboxImg  = document.getElementById("lightbox-img");
+    const lightboxClose = document.getElementById("lightbox-close");
+
+    const lightboxColor = document.getElementById("lightbox-color");
+
+    function showColor(color) {
+      lightboxImg.style.display = "none";
+      lightboxColor.style.display = "block";
+      lightboxColor.style.background = color;
+    }
+
+    function openLightbox(src, color) {
+      lightboxColor.style.display = "none";
+      lightboxImg.style.display = "none";
+
+      if (src) {
+        lightboxImg.src = "";
+        lightboxImg.onerror = () => showColor(color);
+        lightboxImg.onload  = () => { lightboxImg.style.display = "block"; };
+        lightboxImg.src = src;
+      } else {
+        showColor(color);
+      }
+
+      lightbox.classList.add("open");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove("open");
+      document.body.style.overflow = "";
+    }
+
+    lightboxClose.addEventListener("click", closeLightbox);
+    lightbox.addEventListener("click", e => { if (e.target === lightbox) closeLightbox(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape") closeLightbox(); });
+
+    /* ════════════════════════════════════════════════════════════════
+     * INIT
+     * ════════════════════════════════════════════════════════════════ */
+    renderProjects();
+    renderArchive();
+    renderNav();
+
+
+  </script>
+
+
+</body>
+</html>
