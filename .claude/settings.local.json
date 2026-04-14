@@ -29,7 +29,12 @@
       "Bash(xargs du:*)",
       "Bash(sips --getProperty pixelWidth /Users/vegarefteland/Desktop/nettside/images/projects/03/05.jpg)",
       "Bash(sips --getProperty pixelWidth /Users/vegarefteland/Desktop/nettside/images/archive/04.png)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(sips --formats)",
+      "Bash(sips -s format webp /Users/vegarefteland/Desktop/nettside/images/projects/03/cover.jpg --out /tmp/test.webp)",
+      "Bash(ffmpeg -i /Users/vegarefteland/Desktop/nettside/images/projects/03/cover.jpg -quality 82 /tmp/test.webp)",
+      "Bash(brew list:*)",
+      "Bash(find /Users/vegarefteland/Desktop/nettside/images/projects -name \"*.png\" -delete)"
     ]
   }
 }

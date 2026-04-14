@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vegar Efteland</title>
   <link rel="icon" href="images/favicon.png" type="image/png">
+  <link rel="preload" as="image" href="images/projects/01/cover.jpg" fetchpriority="high">
+  <link rel="preload" as="image" href="images/projects/02/cover.jpg" fetchpriority="high">
+  <link rel="preload" as="image" href="images/projects/03/cover.jpg" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -583,19 +586,14 @@
       width: 100%;
       border-radius: 6px;
       overflow: hidden;
-      background: var(--placeholder);
-      aspect-ratio: 4 / 3;
     }
-    .project-hero.loaded { aspect-ratio: unset; }
 
     .project-img-item {
       position: relative;
-      background: var(--placeholder);
       border-radius: 6px;
       overflow: hidden;
-      aspect-ratio: 4 / 3;
     }
-    .project-img-item.loaded { aspect-ratio: unset; }
+
 
     .project-hero img {
       width: 100%;
@@ -1096,8 +1094,9 @@
           wrap.remove();
           const img = document.createElement("img");
           img.alt = i === 1 ? project.title : "";
-          img.loading = "lazy";
+          img.loading = i === 1 ? "eager" : "lazy";
           img.decoding = "async";
+          if (i === 1) img.setAttribute("fetchpriority", "high");
           img.onload = () => {
             item.classList.add("loaded");
             item.style.cursor = "zoom-in";
@@ -1335,6 +1334,7 @@
         img.setAttribute("aria-hidden", "true");
         img.loading = "lazy";
         img.decoding = "async";
+        img.setAttribute("fetchpriority", "low");
 
         img.onerror = function () {
           if (img.src.endsWith(".jpg")) {
