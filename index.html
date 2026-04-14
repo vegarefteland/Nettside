@@ -990,17 +990,20 @@
       return str.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     }
 
+    function pushPath(path, state) {
+      try { history.pushState(state, "", path); } catch(e) {}
+    }
+
     function navigate(pageId) {
       if (pageId === currentPage && pageId !== "project") return;
       currentProject = null;
-      const path = pageId === "home" ? "/" : "/" + pageId;
-      history.pushState({ page: pageId }, "", path);
+      pushPath(pageId === "home" ? "/" : "/" + pageId, { page: pageId });
       showPage(pageId);
     }
 
     function openProject(project) {
       currentProject = project;
-      history.pushState({ page: "project", slug: slugify(project.title) }, "", "/" + slugify(project.title));
+      pushPath("/" + slugify(project.title), { page: "project", slug: slugify(project.title) });
       renderProjectPage(project);
       showPage("project");
     }
