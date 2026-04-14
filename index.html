@@ -6,7 +6,7 @@
   <title>Vegar Efteland</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
     /* ─── Reset ─────────────────────────────────────────────── */
@@ -26,7 +26,7 @@
       --nav-bg:     rgba(255, 255, 255, 0.88);
       --placeholder:#d4d4d4;
       --gap:        6px;
-      --font:       'Space Grotesk', system-ui, -apple-system, sans-serif;
+      --font:       'Inter', system-ui, sans-serif;
       --ease-out:   cubic-bezier(0.22, 1, 0.36, 1);
       --ease-in:    cubic-bezier(0.4, 0, 1, 1);
     }
@@ -832,7 +832,11 @@
 
     function showPage(pageId) {
       const old = document.getElementById("page-" + currentPage);
-      if (old) { old.classList.remove("active"); old.style.display = "none"; }
+      if (old) {
+        old.classList.remove("active");
+        old.style.display = "none";
+        old.querySelectorAll("video").forEach(v => { v.pause(); v.muted = true; });
+      }
       currentPage = pageId;
       const next = document.getElementById("page-" + currentPage);
       next.style.display = "";
@@ -1183,6 +1187,54 @@
     renderProjects();
     renderArchive();
     renderNav();
+
+    /* ── Easter egg — confetti on name click ── */
+    document.querySelector('.nav-pill-name').style.cursor = 'pointer';
+
+    document.querySelector('.nav-pill-name').addEventListener('click', function () {
+      const rect    = this.getBoundingClientRect();
+      const originX = rect.left + rect.width / 2;
+      const originY = rect.top  + rect.height / 2;
+      const colors  = ['#0a0a0a', '#888', '#ccc', '#fff', '#555'];
+      const count   = 28;
+
+      for (let i = 0; i < count; i++) {
+        const el = document.createElement('div');
+        const size  = Math.random() * 6 + 4;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 120 + 60;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const spin  = (Math.random() - 0.5) * 720;
+
+        el.style.cssText = `
+          position: fixed;
+          left: ${originX}px;
+          top:  ${originY}px;
+          width: ${size}px;
+          height: ${size}px;
+          background: ${color};
+          border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+          pointer-events: none;
+          z-index: 9999;
+          transform-origin: center;
+        `;
+        document.body.appendChild(el);
+
+        const start = performance.now();
+        const dur   = 700 + Math.random() * 300;
+
+        (function animate(now) {
+          const t  = Math.min((now - start) / dur, 1);
+          const ease = 1 - Math.pow(1 - t, 3);
+          const x  = Math.cos(angle) * speed * ease;
+          const y  = Math.sin(angle) * speed * ease + 80 * t * t;
+          el.style.transform = `translate(${x}px, ${y}px) rotate(${spin * t}deg)`;
+          el.style.opacity   = 1 - t;
+          if (t < 1) requestAnimationFrame(animate);
+          else el.remove();
+        })(start);
+      }
+    });
 
 
   </script>
