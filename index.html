@@ -27,8 +27,10 @@
       --border:     #e8e8e8;
       --tag-bg:     #0a0a0a;
       --tag-fg:     #ffffff;
+      --tag-border: transparent;
       --nav-bg:     rgba(255, 255, 255, 0.88);
       --placeholder:#d4d4d4;
+      --hover-shadow: 0 6px 24px rgba(0, 0, 0, 0.13);
       --gap:        6px;
       --font:       'Inter', system-ui, sans-serif;
       --ease-out:   cubic-bezier(0.22, 1, 0.36, 1);
@@ -41,10 +43,12 @@
       --fg:         #efefef;
       --muted:      #606060;
       --border:     #242424;
-      --tag-bg:     #efefef;
-      --tag-fg:     #0d0d0d;
+      --tag-bg:     #000000;
+      --tag-fg:     #ffffff;
+      --tag-border: rgba(255, 255, 255, 0.25);
       --nav-bg:     rgba(13, 13, 13, 0.88);
       --placeholder:#1e1e1e;
+      --hover-shadow: 0 0 20px rgba(255, 255, 255, 0.12);
     }
 
     /* ─── Base ───────────────────────────────────────────────── */
@@ -145,7 +149,10 @@
       box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
       pointer-events: all;
       white-space: nowrap;
-      transition: background var(--theme-transition), border-color var(--theme-transition);
+      transition: background var(--theme-transition), border-color var(--theme-transition), box-shadow 250ms ease;
+    }
+    .nav-pill:hover {
+      box-shadow: var(--hover-shadow);
     }
 
     [data-theme="dark"] .nav-pill {
@@ -250,6 +257,11 @@
       cursor: pointer;
       background: var(--placeholder);
       border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0);
+      transition: box-shadow 250ms ease;
+    }
+    .project-card:hover {
+      box-shadow: var(--hover-shadow);
     }
 
     .project-card img {
@@ -324,11 +336,13 @@
       display: inline-block;
       background: var(--tag-bg);
       color: var(--tag-fg);
+      border: 1px solid var(--tag-border);
       font-size: 12.5px;
       font-weight: 500;
       padding: 4px 12px;
       border-radius: 100px;
       margin-bottom: 18px;
+      transition: box-shadow 250ms ease;
     }
 
     .about-bio {
@@ -454,6 +468,7 @@
       height: 100%;
       object-fit: cover;
       transition: transform 500ms var(--ease-out);
+      animation: imgFadeUp 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
     }
     .archive-img:hover img { transform: scale(1.04); }
 
@@ -485,6 +500,11 @@
 
     @keyframes archiveIn {
       from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes imgFadeUp {
+      from { opacity: 0; transform: translateY(10px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
@@ -531,19 +551,21 @@
       right: 20px;
       width: 36px;
       height: 36px;
-      background: rgba(255,255,255,0.12);
-      border: none;
-      border-radius: 50%;
-      color: #fff;
-      font-size: 18px;
-      line-height: 1;
+      background: var(--nav-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(0, 0, 0, 0.07);
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      border-radius: 100px;
+      color: var(--fg);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 180ms ease;
+      transition: opacity 180ms ease, box-shadow 250ms ease;
     }
-    .lightbox-close:hover { background: rgba(255,255,255,0.22); }
+    .lightbox-close:hover { background: var(--nav-bg); opacity: 0.75; box-shadow: var(--hover-shadow); }
+    [data-theme="dark"] .lightbox-close { border-color: rgba(255,255,255,0.07); }
 
     .archive-img { cursor: zoom-in; }
 
@@ -616,6 +638,20 @@
       width: 100%;
       height: auto;
       display: block;
+    }
+
+    /* Fade-up when image finishes loading */
+    .project-hero img,
+    .project-img-item img {
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 500ms cubic-bezier(0.22, 1, 0.36, 1),
+                  transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .project-hero.loaded img,
+    .project-img-item.loaded img {
+      opacity: 1;
+      transform: translateY(0);
     }
 
     .video-wrap {
@@ -761,7 +797,7 @@
         <span class="section-tag">Currently</span>
         <!-- ↓ Edit current role ↓ -->
         <div class="entry">
-          <span class="entry-name">Bachelor – Design & Visual communications<br>University of Bergen
+          <span class="entry-name">BA – Design & Visual communications<br>University of Bergen
           </span>
         </div>
       </div>
@@ -842,7 +878,11 @@
 
   <!-- Lightbox -->
   <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
-    <button class="lightbox-close" id="lightbox-close" aria-label="Close">✕</button>
+    <button class="lightbox-close" id="lightbox-close" aria-label="Close">
+      <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" width="12" height="12">
+        <path d="M1 1L11 11M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
     <img id="lightbox-img" src="" alt="" style="display:none">
     <div id="lightbox-color" style="display:none; width:min(90vw,600px); height:min(90vw,600px); border-radius:6px;"></div>
   </div>
@@ -928,7 +968,7 @@
           folder: "04",
           cover: "images/projects/04/cover.jpg",
           color: "#3D4A5C",
-          description: "Selected Poster Designs.projects.\n\nSome are school assignments and some are concept design work",
+          description: "Modular Desk Interface concept. Inpired by the design language og Braun and Teenage Engineering. Built around phystical buttons and knobs, materials include sandblasted steel with a matte finish.\n\nModeled and rendered in Blender.",
         },
         {
           title: "Motion Graphics",
@@ -1081,6 +1121,7 @@
         const mp4  = `images/projects/${project.folder}/${num}.mp4`;
         const webp = `images/projects/${project.folder}/${num}.webp`;
         const jpg  = `images/projects/${project.folder}/${num}.jpg`;
+        const jpeg = `images/projects/${project.folder}/${num}.jpeg`;
         const png  = `images/projects/${project.folder}/${num}.png`;
 
         const target = project.layout === "grid" ? container : right;
@@ -1119,6 +1160,8 @@
             if (img.src.endsWith(".webp")) {
               img.src = jpg;
             } else if (img.src.endsWith(".jpg")) {
+              img.src = jpeg;
+            } else if (img.src.endsWith(".jpeg")) {
               img.src = png;
             } else {
               item.remove();
@@ -1357,6 +1400,7 @@
         const num = String(i).padStart(2, "0");
         const webp = `images/archive/${num}.webp`;
         const jpg  = `images/archive/${num}.jpg`;
+        const jpeg = `images/archive/${num}.jpeg`;
         const png  = `images/archive/${num}.png`;
 
         const img = new Image();
@@ -1378,6 +1422,8 @@
           if (img.src.endsWith(".webp")) {
             img.src = jpg;
           } else if (img.src.endsWith(".jpg")) {
+            img.src = jpeg;
+          } else if (img.src.endsWith(".jpeg")) {
             img.src = png;
           } else {
             archMisses++;
