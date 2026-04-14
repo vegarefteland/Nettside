@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vegar Efteland</title>
   <link rel="icon" href="images/favicon.png" type="image/png">
-  <link rel="preload" as="image" href="images/projects/01/cover.jpg" fetchpriority="high">
-  <link rel="preload" as="image" href="images/projects/02/cover.jpg" fetchpriority="high">
-  <link rel="preload" as="image" href="images/projects/03/cover.jpg" fetchpriority="high">
+  <link rel="preload" as="image" href="images/projects/01/cover.webp" fetchpriority="high">
+  <link rel="preload" as="image" href="images/projects/02/cover.webp" fetchpriority="high">
+  <link rel="preload" as="image" href="images/projects/03/cover.webp" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -1071,9 +1071,10 @@
 
       for (let i = 1; i <= 99; i++) {
         const num = String(i).padStart(2, "0");
-        const mp4 = `images/projects/${project.folder}/${num}.mp4`;
-        const jpg = `images/projects/${project.folder}/${num}.jpg`;
-        const png = `images/projects/${project.folder}/${num}.png`;
+        const mp4  = `images/projects/${project.folder}/${num}.mp4`;
+        const webp = `images/projects/${project.folder}/${num}.webp`;
+        const jpg  = `images/projects/${project.folder}/${num}.jpg`;
+        const png  = `images/projects/${project.folder}/${num}.png`;
 
         let target = project.layout === "grid" ? container : right;
 
@@ -1097,21 +1098,22 @@
           img.loading = i === 1 ? "eager" : "lazy";
           img.decoding = "async";
           if (i === 1) img.setAttribute("fetchpriority", "high");
-          img.onload = () => {
+          const onImgLoad = () => {
             item.classList.add("loaded");
             item.style.cursor = "zoom-in";
             item.addEventListener("click", () => openLightbox(img.src, "#d4d4d4"));
           };
+          img.onload = onImgLoad;
           img.onerror = () => {
-            img.onerror = () => item.remove();
-            img.onload = () => {
-              item.classList.add("loaded");
-              item.style.cursor = "zoom-in";
-              item.addEventListener("click", () => openLightbox(img.src, "#d4d4d4"));
-            };
-            img.src = png;
+            if (img.src.endsWith(".webp")) {
+              img.src = jpg;               // webp failed → try jpg
+            } else if (img.src.endsWith(".jpg")) {
+              img.src = png;               // jpg failed → try png
+            } else {
+              item.remove();               // nothing found
+            }
           };
-          img.src = jpg;
+          img.src = webp;
           item.appendChild(img);
         });
 
@@ -1284,13 +1286,19 @@
         </svg>`;
 
         const img = document.createElement("img");
-        img.src = project.cover;
+        const coverWebp = project.cover.replace(/\.(jpg|png)$/, ".webp");
+        img.src = coverWebp;
         img.alt = project.title;
         img.loading = "lazy";
+        img.decoding = "async";
         img.width = 800;
         img.height = 600;
         img.onerror = function () {
-          this.style.display = "none";
+          if (img.src.endsWith(".webp")) {
+            img.src = project.cover; // fall back to original jpg
+          } else {
+            this.style.display = "none";
+          }
         };
 
         card.appendChild(img);
@@ -1323,6 +1331,7 @@
 
       for (const i of order) {
         const num  = String(i).padStart(2, "0");
+        const webp = `images/archive/${num}.webp`;
         const jpg  = `images/archive/${num}.jpg`;
         const png  = `images/archive/${num}.png`;
 
@@ -1337,14 +1346,16 @@
         img.setAttribute("fetchpriority", "low");
 
         img.onerror = function () {
-          if (img.src.endsWith(".jpg")) {
+          if (img.src.endsWith(".webp")) {
+            img.src = jpg;
+          } else if (img.src.endsWith(".jpg")) {
             img.src = png;
           } else {
             cell.remove();
           }
         };
 
-        img.src = jpg;
+        img.src = webp;
         cell.appendChild(img);
         cell.addEventListener("click", () => openLightbox(img.src, "#d4d4d4"));
         grid.appendChild(cell);
