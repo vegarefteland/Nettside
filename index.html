@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vegar Efteland</title>
+  <link rel="icon" href="images/favicon.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -29,6 +30,18 @@
       --font:       'Inter', system-ui, sans-serif;
       --ease-out:   cubic-bezier(0.22, 1, 0.36, 1);
       --ease-in:    cubic-bezier(0.4, 0, 1, 1);
+      --theme-transition: 350ms ease;
+    }
+
+    [data-theme="dark"] {
+      --bg:         #0d0d0d;
+      --fg:         #efefef;
+      --muted:      #606060;
+      --border:     #242424;
+      --tag-bg:     #efefef;
+      --tag-fg:     #0d0d0d;
+      --nav-bg:     rgba(13, 13, 13, 0.88);
+      --placeholder:#1e1e1e;
     }
 
     /* ─── Base ───────────────────────────────────────────────── */
@@ -40,7 +53,39 @@
       line-height: 1.5;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      transition: background var(--theme-transition), color var(--theme-transition);
     }
+
+    /* ─── Theme toggle ───────────────────────────────────────── */
+    .theme-toggle {
+      position: relative;
+      width: 22px;
+      height: 22px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      padding: 0;
+      border-radius: 50%;
+      transition: color 180ms ease, background 180ms ease;
+      flex-shrink: 0;
+    }
+    .theme-toggle:hover { color: var(--fg); background: rgba(128,128,128,0.1); }
+    .theme-toggle svg {
+      position: absolute;
+      width: 15px;
+      height: 15px;
+      transition: opacity 250ms ease, transform 420ms var(--ease-out);
+    }
+    /* Light mode: moon visible, sun pre-rotated and hidden */
+    .theme-toggle .icon-moon { opacity: 1; transform: translateY(0); }
+    .theme-toggle .icon-sun  { opacity: 0; transform: rotate(90deg); }
+    /* Dark mode: sun spins in, moon slides out upward */
+    [data-theme="dark"] .theme-toggle .icon-moon { opacity: 0; transform: translateY(-6px); }
+    [data-theme="dark"] .theme-toggle .icon-sun  { opacity: 1; transform: rotate(0deg); }
 
     /* ─── Pages ──────────────────────────────────────────────── */
     .page {
@@ -58,7 +103,7 @@
 
     @media (prefers-reduced-motion: reduce) {
       .page, .project-card img, .archive-img img,
-      .project-arrow, .project-card::after { transition: none !important; animation: none !important; }
+      .project-arrow, .project-card::after, .skills-reel { transition: none !important; animation: none !important; }
     }
 
     /* ─── Top Nav ────────────────────────────────────────────── */
@@ -71,7 +116,16 @@
       align-items: center;
       justify-content: space-between;
       z-index: 200;
+
       pointer-events: none;
+    }
+
+    .nav-pill-center {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      overflow: hidden;
+      cursor: default;
     }
 
     .nav-pill {
@@ -80,13 +134,19 @@
       -webkit-backdrop-filter: blur(16px);
       border: 1px solid rgba(0, 0, 0, 0.07);
       border-radius: 100px;
-      padding: 8px 18px;
+      padding: 0 18px;
+      height: 36px;
       display: flex;
       align-items: center;
       gap: 16px;
       box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
       pointer-events: all;
       white-space: nowrap;
+      transition: background var(--theme-transition), border-color var(--theme-transition);
+    }
+
+    [data-theme="dark"] .nav-pill {
+      border-color: rgba(255, 255, 255, 0.07);
     }
 
     @media (max-width: 600px) {
@@ -98,6 +158,57 @@
       font-weight: 500;
       color: var(--fg);
       user-select: none;
+      white-space: nowrap;
+      /* hover-out: wait for wheel to disappear, then slide name back in */
+      transition: opacity 220ms ease 140ms, transform 300ms var(--ease-out) 140ms;
+    }
+    .nav-pill-center:hover .nav-pill-name {
+      opacity: 0;
+      transform: translateY(-6px);
+      pointer-events: none;
+      /* hover-in: name exits immediately */
+      transition: opacity 160ms ease, transform 200ms var(--ease-out);
+    }
+
+    /* ─── Skills wheel ───────────────────────────────────── */
+    .skills-wheel {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+      /* hover-out: wheel exits immediately */
+      transition: opacity 140ms ease;
+    }
+    .nav-pill-center:hover .skills-wheel {
+      opacity: 1;
+      /* hover-in: wheel fades in after name is gone */
+      transition: opacity 200ms ease 140ms;
+    }
+
+    .skills-reel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .skills-reel span {
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--fg);
+      white-space: nowrap;
+      height: 36px;
+      line-height: 36px;
+      display: block;
+    }
+    .nav-pill-center:hover .skills-reel {
+      animation: skillsWheel 5s linear infinite;
+    }
+    @keyframes skillsWheel {
+      from { transform: translateY(0); }
+      to   { transform: translateY(-50%); }
     }
 
     .nav-pill a {
@@ -142,8 +253,10 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transition: transform 550ms var(--ease-out);
+      opacity: 0;
+      transition: opacity 400ms ease, transform 550ms var(--ease-out);
     }
+    .project-card.img-loaded img { opacity: 1; }
 
     .project-card:hover img {
       transform: scale(1.04);
@@ -202,7 +315,7 @@
 
     /* ─── ── ABOUT PAGE ────────────────────────────────────────── */
     .about-wrap {
-      max-width: 480px;
+      max-width: 600px;
       padding-top: 8px;
     }
 
@@ -276,6 +389,12 @@
     }
     .contact-item a:hover { opacity: 0.5; }
 
+    .skills-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 40px;
+    }
+
     .about-footer {
       margin-top: 64px;
       padding-top: 20px;
@@ -311,6 +430,7 @@
     }
 
     .archive-img {
+      position: relative;
       overflow: hidden;
       background: var(--placeholder);
       border-radius: 6px;
@@ -324,8 +444,10 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transition: transform 500ms var(--ease-out);
+      opacity: 0;
+      transition: opacity 400ms ease, transform 500ms var(--ease-out);
     }
+    .archive-img.img-loaded img { opacity: 1; }
     .archive-img:hover img { transform: scale(1.04); }
 
     /* colored placeholder blocks */
@@ -453,6 +575,7 @@
     }
 
     .project-hero {
+      position: relative;
       width: 100%;
       border-radius: 6px;
       overflow: hidden;
@@ -473,6 +596,7 @@
     }
 
     .project-img-item {
+      position: relative;
       background: var(--placeholder);
       border-radius: 6px;
       overflow: hidden;
@@ -568,6 +692,35 @@
       .project-left { position: static; }
     }
 
+    /* ─── Shimmer skeleton ──────────────────────────────────── */
+    .project-card::before,
+    .archive-img::before,
+    .project-hero::before,
+    .project-img-item::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background: linear-gradient(
+        45deg,
+        transparent    25%,
+        rgba(255,255,255,0.45) 50%,
+        transparent    75%
+      );
+      background-size: 200% 100%;
+      animation: shimmer 1.4s linear infinite;
+    }
+    .project-card.img-loaded::before,
+    .archive-img.img-loaded::before,
+    .project-hero.img-loaded::before,
+    .project-img-item.img-loaded::before { display: none; }
+
+    @keyframes shimmer {
+      from { background-position: 200% 0; }
+      to   { background-position: -200% 0; }
+    }
+
     /* ─── Stagger for project grid ───────────────────────────── */
     .project-card { animation: cardIn 380ms var(--ease-out) both; }
     .project-card:nth-child(1) { animation-delay: 0ms; }
@@ -621,45 +774,37 @@
       <span class="section-tag">About</span>
       <!-- ↓ Edit your bio here ↓ -->
       <p class="about-bio">
-        I'm Vegar, a graphic designer and visual communicator based in Norway.
-        I work across brand identity, motion, and digital design — driven by a
-        curiosity for systems, visual language, and how design shapes experience.
+        I'm Vegar, a first year Design & Visual communications student at the University of Bergen. My passions within design include Merch Design, Poster Design, Visual Identities, Motion Graphics and more.
       </p>
 
       <div class="section-block">
         <span class="section-tag">Currently</span>
         <!-- ↓ Edit current role ↓ -->
         <div class="entry">
-          <span class="entry-year">2024 –</span>
-          <span class="entry-name">Freelance Designer</span>
-        </div>
-      </div>
-
-      <div class="section-block">
-        <span class="section-tag">Previously</span>
-        <!-- ↓ Edit past roles ↓ -->
-        <div class="entry">
-          <span class="entry-year">2023</span>
-          <span class="entry-name">Poster Design Projects</span>
-        </div>
-        <div class="entry">
-          <span class="entry-year">2022 – 2023</span>
-          <span class="entry-name">Motion Graphics &amp; 3D</span>
-        </div>
-        <div class="entry">
-          <span class="entry-year">2021</span>
-          <span class="entry-name">Personal Branding Work</span>
-        </div>
-      </div>
-
-      <div class="section-block">
-        <span class="section-tag">Recognition</span>
-        <!-- ↓ Edit awards ↓ -->
-        <div class="entry">
-          <span class="entry-year">2024</span>
-          <span class="entry-name">
-            <a class="entry-link" href="https://vegarem.no" target="_blank" rel="noopener">F1 Merch Design↗</a>
+          <span class="entry-name">Bachelor – Design & Visual communications<br>University of Bergen
           </span>
+        </div>
+      </div>
+
+      <div class="skills-row">
+        <div class="section-block">
+          <span class="section-tag">Software</span>
+          <!-- ↓ Edit software ↓ -->
+          <div class="entry"><span class="entry-name">Photoshop</span></div>
+          <div class="entry"><span class="entry-name">Illustrator</span></div>
+          <div class="entry"><span class="entry-name">InDesign</span></div>
+          <div class="entry"><span class="entry-name">After Effects</span></div>
+          <div class="entry"><span class="entry-name">Premiere Pro</span></div>
+          <div class="entry"><span class="entry-name">Blender</span></div>
+        </div>
+
+        <div class="section-block">
+          <span class="section-tag">Skills</span>
+          <!-- ↓ Edit skills ↓ -->
+          <div class="entry"><span class="entry-name">Graphic Design</span></div>
+          <div class="entry"><span class="entry-name">Motion Graphics</span></div>
+          <div class="entry"><span class="entry-name">3D Modeling</span></div>
+          <div class="entry"><span class="entry-name">Photography</span></div>
         </div>
       </div>
 
@@ -673,11 +818,11 @@
           </div>
           <div class="contact-item">
             <p class="ci-label">Instagram</p>
-            <a href="https://instagram.com" target="_blank" rel="noopener">@vegarem</a>
+            <a href="https://instagram.com" target="_blank" rel="noopener">@vegar.efteland</a>
           </div>
           <div class="contact-item">
             <p class="ci-label">LinkedIn</p>
-            <a href="https://linkedin.com" target="_blank" rel="noopener">vegar-efteland</a>
+            <a href="https://www.linkedin.com/in/vegar-efteland-melhus-702684320/" target="_blank" rel="noopener">Vegar E. Melhus</a>
           </div>
           <div class="contact-item">
             <p class="ci-label">Website</p>
@@ -688,7 +833,7 @@
 
       <footer class="about-footer">
         <!-- ↓ Edit footer ↓ -->
-        Copyright ©2025 Vegar Efteland, All rights reserved
+        Copyright ©2026 Vegar Efteland Melhus, All rights reserved
       </footer>
 
     </div>
@@ -723,7 +868,33 @@
        ══════════════════════════════════════════════════════════════ -->
   <nav class="top-nav" aria-label="Primary navigation">
     <div class="nav-pill" id="nav-left"></div>
-    <div class="nav-pill nav-pill-center"><span class="nav-pill-name">Vegar Efteland Melhus</span></div>
+    <div class="nav-pill nav-pill-center">
+      <span class="nav-pill-name">Vegar Efteland Melhus</span>
+      <div class="skills-wheel" aria-hidden="true">
+        <div class="skills-reel">
+          <span>Graphic Design</span>
+          <span>Motion Graphics</span>
+          <span>3D Modeling</span>
+          <span>Photography</span>
+          <span>Photoshop</span>
+          <span>Illustrator</span>
+          <span>InDesign</span>
+          <span>After Effects</span>
+          <span>Premiere Pro</span>
+          <span>Blender</span>
+          <span>Graphic Design</span>
+          <span>Motion Graphics</span>
+          <span>3D Modeling</span>
+          <span>Photography</span>
+          <span>Photoshop</span>
+          <span>Illustrator</span>
+          <span>InDesign</span>
+          <span>After Effects</span>
+          <span>Premiere Pro</span>
+          <span>Blender</span>
+        </div>
+      </div>
+    </div>
     <div class="nav-pill" id="nav-right"></div>
   </nav>
 
@@ -890,7 +1061,7 @@
       } else {
         const hero = document.createElement("div");
         hero.className = "project-hero";
-        hero.style.background = project.color;
+        // background stays as --placeholder until image loads
         right.appendChild(hero);
         container = hero; // first image goes into hero
       }
@@ -919,7 +1090,8 @@
 
         const item = document.createElement("div");
         item.className = project.layout === "grid" || i > 1 ? "project-img-item" : "";
-        item.style.background = project.color;
+        // shimmerTarget: the element that has the shimmer ::before (project-hero or project-img-item)
+        const shimmerTarget = (i === 1 && project.layout !== "grid") ? container : item;
 
         const video = document.createElement("video");
         video.autoplay = true;
@@ -928,14 +1100,30 @@
         video.setAttribute("playsinline", "");
         video.setAttribute("preload", "metadata");
 
+        video.style.opacity = "0";
+        video.style.transition = "opacity 400ms ease";
+        video.addEventListener("canplay", function () {
+          video.style.opacity = "1";
+        }, { once: true });
+
         video.addEventListener("error", function () {
           wrap.remove();
           const img = document.createElement("img");
           img.alt = i === 1 ? project.title : "";
-          img.src = jpg;
+          img.style.opacity = "0";
+          img.style.transition = "opacity 400ms ease";
+          img.onload = () => {
+            img.style.opacity = "1";
+            shimmerTarget.classList.add("img-loaded");
+          };
           img.onerror = () => item.remove();
+          img.src = jpg;
           item.appendChild(img);
         });
+
+        video.addEventListener("canplay", function () {
+          shimmerTarget.classList.add("img-loaded");
+        }, { once: true });
 
         video.src = mp4;
 
@@ -1049,6 +1237,23 @@
       left.innerHTML  = "";
       right.innerHTML = "";
 
+      const btn = document.createElement("button");
+      btn.className = "theme-toggle";
+      btn.setAttribute("aria-label", "Toggle dark mode");
+      btn.innerHTML = `
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>`;
+      btn.addEventListener("click", toggleTheme);
+      left.appendChild(btn);
+
       if (currentPage === "project" && currentProject) {
         center.textContent = currentProject.title;
         left.appendChild(makeNavLink("home", "← Home"));
@@ -1072,7 +1277,7 @@
         card.setAttribute("tabindex", "0");
         card.setAttribute("role", "article");
         card.setAttribute("aria-label", project.title);
-        if (project.color) card.style.background = project.color;
+        // background stays as --placeholder (gray + shimmer) until image loads
 
         const label = document.createElement("span");
         label.className = "project-label";
@@ -1082,7 +1287,7 @@
         arrow.className = "project-arrow";
         arrow.setAttribute("aria-hidden", "true");
         arrow.innerHTML = `<svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M2 10L10 2M10 2H4M10 2V8" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 10L10 2M10 2H4M10 2V8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>`;
 
         const img = document.createElement("img");
@@ -1093,7 +1298,10 @@
         img.height = 600;
         img.onerror = function () {
           this.style.display = "none";
+          card.classList.add("img-loaded");
         };
+        img.addEventListener("load", () => card.classList.add("img-loaded"));
+        if (img.complete) card.classList.add("img-loaded");
 
         card.appendChild(img);
         card.appendChild(label);
@@ -1132,8 +1340,10 @@
         img.onerror = function () {
           cell.remove();
         };
+        img.addEventListener("load", () => cell.classList.add("img-loaded"));
 
         img.src = src;
+        if (img.complete) cell.classList.add("img-loaded");
         cell.appendChild(img);
         cell.addEventListener("click", () => openLightbox(src, "#d4d4d4"));
         grid.appendChild(cell);
@@ -1182,11 +1392,29 @@
     document.addEventListener("keydown", e => { if (e.key === "Escape") closeLightbox(); });
 
     /* ════════════════════════════════════════════════════════════════
+     * THEME
+     * ════════════════════════════════════════════════════════════════ */
+    function toggleTheme() {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      const next = isDark ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      localStorage.setItem("theme", next);
+    }
+
+    (function initTheme() {
+      const saved = localStorage.getItem("theme");
+      const preferred = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      const theme = saved || preferred;
+      if (theme === "dark") document.documentElement.setAttribute("data-theme", "dark");
+    })();
+
+    /* ════════════════════════════════════════════════════════════════
      * INIT
      * ════════════════════════════════════════════════════════════════ */
     renderProjects();
     renderArchive();
     renderNav();
+
 
     /* ── Easter egg — confetti on name click ── */
     document.querySelector('.nav-pill-name').style.cursor = 'pointer';
