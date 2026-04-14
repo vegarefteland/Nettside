@@ -986,28 +986,32 @@
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
+    function slugify(str) {
+      return str.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    }
+
     function navigate(pageId) {
       if (pageId === currentPage && pageId !== "project") return;
       currentProject = null;
-      history.pushState({ page: pageId }, "", "#" + pageId);
+      const path = pageId === "home" ? "/" : "/" + pageId;
+      history.pushState({ page: pageId }, "", path);
       showPage(pageId);
     }
 
     function openProject(project) {
       currentProject = project;
-      history.pushState({ page: "project", folder: project.folder }, "", "#project-" + project.folder);
+      history.pushState({ page: "project", slug: slugify(project.title) }, "", "/" + slugify(project.title));
       renderProjectPage(project);
       showPage("project");
     }
 
-    function restoreFromHash() {
-      const hash = location.hash.slice(1);
-      if (hash === "about" || hash === "archive") {
+    function restoreFromPath() {
+      const path = window.location.pathname.slice(1);
+      if (path === "about" || path === "archive") {
         currentProject = null;
-        showPage(hash);
-      } else if (hash.startsWith("project-")) {
-        const folder = hash.replace("project-", "");
-        const project = SITE.projects.find(p => p.folder === folder);
+        showPage(path);
+      } else if (path) {
+        const project = SITE.projects.find(p => slugify(p.title) === path);
         if (project) { currentProject = project; renderProjectPage(project); showPage("project"); }
         else showPage("home");
       } else {
@@ -1015,7 +1019,7 @@
       }
     }
 
-    window.addEventListener("popstate", restoreFromHash);
+    window.addEventListener("popstate", restoreFromPath);
 
     function renderProjectPage(project) {
       const page = document.getElementById("page-project");
@@ -1382,7 +1386,14 @@
      * ════════════════════════════════════════════════════════════════ */
     renderProjects();
     renderArchive();
-    restoreFromHash();
+
+    // Handle redirect from 404.html (direct URL visits on GitHub Pages)
+    const redirectPath = new URLSearchParams(window.location.search).get("p");
+    if (redirectPath) {
+      history.replaceState(null, "", "/" + redirectPath);
+    }
+
+    restoreFromPath();
     renderNav();
 
 

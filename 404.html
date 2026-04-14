@@ -1,0 +1,8 @@
+<!DOCTYPE html>
+<html>
+<script>
+  // Redirect unknown paths back to index.html with path as query param
+  var path = window.location.pathname.slice(1);
+  window.location.replace('/?p=' + encodeURIComponent(path));
+</script>
+</html>
