@@ -253,10 +253,8 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      opacity: 0;
-      transition: opacity 400ms ease, transform 550ms var(--ease-out);
+      transition: transform 550ms var(--ease-out);
     }
-    .project-card.img-loaded img { opacity: 1; }
 
     .project-card:hover img {
       transform: scale(1.04);
@@ -447,10 +445,8 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      opacity: 0;
-      transition: opacity 400ms ease, transform 500ms var(--ease-out);
+      transition: transform 500ms var(--ease-out);
     }
-    .archive-img.img-loaded img { opacity: 1; }
     .archive-img:hover img { transform: scale(1.04); }
 
     /* colored placeholder blocks */
@@ -693,35 +689,6 @@
         grid-template-columns: 1fr;
       }
       .project-left { position: static; }
-    }
-
-    /* ─── Shimmer skeleton ──────────────────────────────────── */
-    .project-card::before,
-    .archive-img::before,
-    .project-hero::before,
-    .project-img-item::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      z-index: 1;
-      pointer-events: none;
-      background: linear-gradient(
-        45deg,
-        transparent    25%,
-        rgba(255,255,255,0.45) 50%,
-        transparent    75%
-      );
-      background-size: 200% 100%;
-      animation: shimmer 1.4s linear infinite;
-    }
-    .project-card.img-loaded::before,
-    .archive-img.img-loaded::before,
-    .project-hero.img-loaded::before,
-    .project-img-item.img-loaded::before { display: none; }
-
-    @keyframes shimmer {
-      from { background-position: 200% 0; }
-      to   { background-position: -200% 0; }
     }
 
     /* ─── Stagger for project grid ───────────────────────────── */
@@ -1022,16 +989,33 @@
     function navigate(pageId) {
       if (pageId === currentPage && pageId !== "project") return;
       currentProject = null;
-      location.hash = pageId;
+      history.pushState({ page: pageId }, "", "#" + pageId);
       showPage(pageId);
     }
 
     function openProject(project) {
       currentProject = project;
-      location.hash = "project-" + project.folder;
+      history.pushState({ page: "project", folder: project.folder }, "", "#project-" + project.folder);
       renderProjectPage(project);
       showPage("project");
     }
+
+    function restoreFromHash() {
+      const hash = location.hash.slice(1);
+      if (hash === "about" || hash === "archive") {
+        currentProject = null;
+        showPage(hash);
+      } else if (hash.startsWith("project-")) {
+        const folder = hash.replace("project-", "");
+        const project = SITE.projects.find(p => p.folder === folder);
+        if (project) { currentProject = project; renderProjectPage(project); showPage("project"); }
+        else showPage("home");
+      } else {
+        showPage("home");
+      }
+    }
+
+    window.addEventListener("popstate", restoreFromHash);
 
     function renderProjectPage(project) {
       const page = document.getElementById("page-project");
@@ -1103,30 +1087,14 @@
         video.setAttribute("playsinline", "");
         video.setAttribute("preload", "metadata");
 
-        video.style.opacity = "0";
-        video.style.transition = "opacity 400ms ease";
-        video.addEventListener("canplay", function () {
-          video.style.opacity = "1";
-        }, { once: true });
-
         video.addEventListener("error", function () {
           wrap.remove();
           const img = document.createElement("img");
           img.alt = i === 1 ? project.title : "";
-          img.style.opacity = "0";
-          img.style.transition = "opacity 400ms ease";
-          img.onload = () => {
-            img.style.opacity = "1";
-            item.classList.add("img-loaded");
-          };
           img.onerror = () => item.remove();
           img.src = jpg;
           item.appendChild(img);
         });
-
-        video.addEventListener("canplay", function () {
-          item.classList.add("img-loaded");
-        }, { once: true });
 
         video.src = mp4;
 
@@ -1211,6 +1179,9 @@
 
         const wrap = document.createElement("div");
         wrap.className = "video-wrap";
+        wrap.style.opacity = "0";
+        wrap.style.transition = "opacity 300ms ease";
+        video.addEventListener("canplay", () => { wrap.style.opacity = "1"; }, { once: true });
         wrap.appendChild(video);
         wrap.appendChild(volWrap);
         wrap.appendChild(muteBtn);
@@ -1301,10 +1272,7 @@
         img.height = 600;
         img.onerror = function () {
           this.style.display = "none";
-          card.classList.add("img-loaded");
         };
-        img.addEventListener("load", () => card.classList.add("img-loaded"));
-        if (img.complete) card.classList.add("img-loaded");
 
         card.appendChild(img);
         card.appendChild(label);
@@ -1343,10 +1311,8 @@
         img.onerror = function () {
           cell.remove();
         };
-        img.addEventListener("load", () => cell.classList.add("img-loaded"));
 
         img.src = src;
-        if (img.complete) cell.classList.add("img-loaded");
         cell.appendChild(img);
         cell.addEventListener("click", () => openLightbox(src, "#d4d4d4"));
         grid.appendChild(cell);
@@ -1416,6 +1382,7 @@
      * ════════════════════════════════════════════════════════════════ */
     renderProjects();
     renderArchive();
+    restoreFromHash();
     renderNav();
 
 
