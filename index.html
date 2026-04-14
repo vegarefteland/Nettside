@@ -411,6 +411,9 @@
       max-width: 580px;
       line-height: 1.6;
       margin-bottom: 28px;
+      text-align: center;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .archive-grid {
@@ -845,8 +848,7 @@
        ══════════════════════════════════════════════════════════════ -->
   <section id="page-archive" class="page" aria-label="Archive">
     <p class="archive-intro">
-      A selection of smaller projects, discarded ideas, outtakes, tests
-      and other documentation from the past few years.
+      A mix of smaller projects, experiments, ideas and random designs.
     </p>
     <div class="archive-grid" id="archive-grid"></div>
   </section>
@@ -1020,11 +1022,13 @@
     function navigate(pageId) {
       if (pageId === currentPage && pageId !== "project") return;
       currentProject = null;
+      location.hash = pageId;
       showPage(pageId);
     }
 
     function openProject(project) {
       currentProject = project;
+      location.hash = "project-" + project.folder;
       renderProjectPage(project);
       showPage("project");
     }
@@ -1090,8 +1094,7 @@
 
         const item = document.createElement("div");
         item.className = project.layout === "grid" || i > 1 ? "project-img-item" : "";
-        // shimmerTarget: the element that has the shimmer ::before (project-hero or project-img-item)
-        const shimmerTarget = (i === 1 && project.layout !== "grid") ? container : item;
+        // background stays as --placeholder until image/video loads
 
         const video = document.createElement("video");
         video.autoplay = true;
@@ -1114,7 +1117,7 @@
           img.style.transition = "opacity 400ms ease";
           img.onload = () => {
             img.style.opacity = "1";
-            shimmerTarget.classList.add("img-loaded");
+            item.classList.add("img-loaded");
           };
           img.onerror = () => item.remove();
           img.src = jpg;
@@ -1122,7 +1125,7 @@
         });
 
         video.addEventListener("canplay", function () {
-          shimmerTarget.classList.add("img-loaded");
+          item.classList.add("img-loaded");
         }, { once: true });
 
         video.src = mp4;

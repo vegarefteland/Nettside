@@ -2,3 +2,11 @@ cd /Users/vegarefteland/Desktop/nettside
 git add .
 git commit -m "Update"
 git push
+
+
+-
+
+FORCEPUSH LOCAL TO GITHUB:
+
+git push --force origin main
+
