@@ -439,7 +439,6 @@
     .archive-img {
       position: relative;
       overflow: hidden;
-      background: var(--placeholder);
       border-radius: 6px;
       aspect-ratio: 1 / 1;
     }
@@ -1306,9 +1305,14 @@
      * ════════════════════════════════════════════════════════════════ */
     function renderArchive() {
       const grid = document.getElementById("archive-grid");
-      let loaded = 0;
 
-      for (let i = 1; i <= 99; i++) {
+      const order = Array.from({ length: 99 }, (_, i) => i + 1);
+      for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [order[i], order[j]] = [order[j], order[i]];
+      }
+
+      for (const i of order) {
         const num  = String(i).padStart(2, "0");
         const jpg  = `images/archive/${num}.jpg`;
         const png  = `images/archive/${num}.png`;
