@@ -24,7 +24,12 @@
       "Bash(curl -sL \"https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/481a19ac-bb53-47d0-8e4c-87b1f5a27d0d_rwc_0x0x833x651x32.png?h=793f63a1da46d04fff1d521880d7fb7c\" -o images/projects/01/01.jpg)",
       "Bash(curl -sL \"https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/615425ca-5521-4c53-9d93-1efaebf87df8_rwc_2721x53x833x652x32.png?h=0ce4fcd98a781525734bfdda75f726ae\" -o images/projects/02/cover.jpg)",
       "Bash(curl -sL \"https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/615425ca-5521-4c53-9d93-1efaebf87df8_rwc_2721x53x833x652x32.png?h=0ce4fcd98a781525734bfdda75f726ae\" -o images/projects/02/01.jpg)",
-      "Bash(curl -sL \"https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/8c00eccf-b792-4dd9-b767-8abb9e1f86fc_rwc_0x0x833x651x32.gif?h=fc9ef561fefac02c9315347454f61c95\" -o images/projects/03/cover.jpg)"
+      "Bash(curl -sL \"https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/8c00eccf-b792-4dd9-b767-8abb9e1f86fc_rwc_0x0x833x651x32.gif?h=fc9ef561fefac02c9315347454f61c95\" -o images/projects/03/cover.jpg)",
+      "Bash(du -sh /Users/vegarefteland/Desktop/nettside/images/archive/*)",
+      "Bash(xargs du:*)",
+      "Bash(sips --getProperty pixelWidth /Users/vegarefteland/Desktop/nettside/images/projects/03/05.jpg)",
+      "Bash(sips --getProperty pixelWidth /Users/vegarefteland/Desktop/nettside/images/archive/04.png)",
+      "Bash(git checkout:*)"
     ]
   }
 }

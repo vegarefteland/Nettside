@@ -1098,10 +1098,18 @@
           img.alt = i === 1 ? project.title : "";
           img.loading = "lazy";
           img.decoding = "async";
-          img.onload = () => item.classList.add("loaded");
+          img.onload = () => {
+            item.classList.add("loaded");
+            item.style.cursor = "zoom-in";
+            item.addEventListener("click", () => openLightbox(img.src, "#d4d4d4"));
+          };
           img.onerror = () => {
             img.onerror = () => item.remove();
-            img.onload = () => item.classList.add("loaded");
+            img.onload = () => {
+              item.classList.add("loaded");
+              item.style.cursor = "zoom-in";
+              item.addEventListener("click", () => openLightbox(img.src, "#d4d4d4"));
+            };
             img.src = png;
           };
           img.src = jpg;
