@@ -1096,6 +1096,8 @@
           wrap.remove();
           const img = document.createElement("img");
           img.alt = i === 1 ? project.title : "";
+          img.loading = "lazy";
+          img.decoding = "async";
           img.onload = () => item.classList.add("loaded");
           img.onerror = () => {
             img.onerror = () => item.remove();
@@ -1323,6 +1325,8 @@
         const img = document.createElement("img");
         img.alt = "";
         img.setAttribute("aria-hidden", "true");
+        img.loading = "lazy";
+        img.decoding = "async";
 
         img.onerror = function () {
           if (img.src.endsWith(".jpg")) {
