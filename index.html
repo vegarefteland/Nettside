@@ -585,7 +585,18 @@
       border-radius: 6px;
       overflow: hidden;
       background: var(--placeholder);
+      aspect-ratio: 4 / 3;
     }
+    .project-hero.loaded { aspect-ratio: unset; }
+
+    .project-img-item {
+      position: relative;
+      background: var(--placeholder);
+      border-radius: 6px;
+      overflow: hidden;
+      aspect-ratio: 4 / 3;
+    }
+    .project-img-item.loaded { aspect-ratio: unset; }
 
     .project-hero img {
       width: 100%;
@@ -600,12 +611,6 @@
       align-items: start;
     }
 
-    .project-img-item {
-      position: relative;
-      background: var(--placeholder);
-      border-radius: 6px;
-      overflow: hidden;
-    }
 
     .project-img-item img,
     .project-img-item video,
@@ -1058,45 +1063,25 @@
 
       const right = document.getElementById("project-right");
 
-      // Hero layout (default): first image full width, rest in 2-col grid
       // Grid layout: all images in 2-col grid (set layout: "grid" in SITE.projects)
+      // Default layout: all images stacked full-width
       let container;
       if (project.layout === "grid") {
         container = document.createElement("div");
         container.className = "project-img-grid";
         right.appendChild(container);
-      } else {
-        const hero = document.createElement("div");
-        hero.className = "project-hero";
-        // background stays as --placeholder until image loads
-        right.appendChild(hero);
-        container = hero; // first image goes into hero
       }
 
-      let grid = null;
-
-      for (let i = 1; i <= 9; i++) {
+      for (let i = 1; i <= 99; i++) {
         const num = String(i).padStart(2, "0");
         const mp4 = `images/projects/${project.folder}/${num}.mp4`;
         const jpg = `images/projects/${project.folder}/${num}.jpg`;
+        const png = `images/projects/${project.folder}/${num}.png`;
 
-        // For hero layout: first image into hero, rest into a grid below
-        let target;
-        if (project.layout === "grid") {
-          target = container;
-        } else if (i === 1) {
-          target = container; // hero div
-        } else {
-          if (!grid) {
-            grid = document.createElement("div");
-            grid.className = "project-img-grid";
-            right.appendChild(grid);
-          }
-          target = grid;
-        }
+        let target = project.layout === "grid" ? container : right;
 
         const item = document.createElement("div");
-        item.className = project.layout === "grid" || i > 1 ? "project-img-item" : "";
+        item.className = project.layout === "grid" ? "project-img-item" : "project-hero";
         // background stays as --placeholder until image/video loads
 
         const video = document.createElement("video");
@@ -1106,11 +1091,18 @@
         video.setAttribute("playsinline", "");
         video.setAttribute("preload", "metadata");
 
+        video.addEventListener("canplay", () => { item.classList.add("loaded"); }, { once: true });
+
         video.addEventListener("error", function () {
           wrap.remove();
           const img = document.createElement("img");
           img.alt = i === 1 ? project.title : "";
-          img.onerror = () => item.remove();
+          img.onload = () => item.classList.add("loaded");
+          img.onerror = () => {
+            img.onerror = () => item.remove();
+            img.onload = () => item.classList.add("loaded");
+            img.src = png;
+          };
           img.src = jpg;
           item.appendChild(img);
         });
@@ -1318,7 +1310,8 @@
 
       for (let i = 1; i <= 99; i++) {
         const num  = String(i).padStart(2, "0");
-        const src  = `images/archive/${num}.jpg`;
+        const jpg  = `images/archive/${num}.jpg`;
+        const png  = `images/archive/${num}.png`;
 
         const cell = document.createElement("div");
         cell.className = "archive-img";
@@ -1328,12 +1321,16 @@
         img.setAttribute("aria-hidden", "true");
 
         img.onerror = function () {
-          cell.remove();
+          if (img.src.endsWith(".jpg")) {
+            img.src = png;
+          } else {
+            cell.remove();
+          }
         };
 
-        img.src = src;
+        img.src = jpg;
         cell.appendChild(img);
-        cell.addEventListener("click", () => openLightbox(src, "#d4d4d4"));
+        cell.addEventListener("click", () => openLightbox(img.src, "#d4d4d4"));
         grid.appendChild(cell);
       }
     }
