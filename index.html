@@ -438,67 +438,26 @@
     }
 
     .archive-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: var(--gap);
-    }
-
-    @media (max-width: 1100px) {
-      .archive-grid { grid-template-columns: repeat(4, 1fr); }
-    }
-    @media (max-width: 768px) {
-      .archive-grid { grid-template-columns: repeat(3, 1fr); }
-    }
-    @media (max-width: 480px) {
-      .archive-grid { grid-template-columns: repeat(2, 1fr); }
+      position: relative;
     }
 
     .archive-img {
-      position: relative;
+      position: absolute;
       overflow: hidden;
       border-radius: 6px;
-      aspect-ratio: 1 / 1;
+      animation: archiveIn 350ms var(--ease-out) both;
     }
-    .archive-img.wide  { grid-column: span 2; }
-    .archive-img.tall  { grid-row: span 2; }
-    .archive-img.big   { grid-column: span 2; grid-row: span 2; }
 
     .archive-img img {
       width: 100%;
-      height: 100%;
-      object-fit: cover;
+      height: auto;
+      display: block;
       transition: transform 500ms var(--ease-out);
     }
     .archive-img:hover img { transform: scale(1.04); }
 
-    /* colored placeholder blocks */
-    .ph { width: 100%; height: 100%; }
-
-    /* Stagger animation for archive items */
-    .archive-img {
-      animation: archiveIn 400ms var(--ease-out) both;
-    }
-    .archive-img:nth-child(1)  { animation-delay: 30ms; }
-    .archive-img:nth-child(2)  { animation-delay: 60ms; }
-    .archive-img:nth-child(3)  { animation-delay: 90ms; }
-    .archive-img:nth-child(4)  { animation-delay: 120ms; }
-    .archive-img:nth-child(5)  { animation-delay: 150ms; }
-    .archive-img:nth-child(6)  { animation-delay: 180ms; }
-    .archive-img:nth-child(7)  { animation-delay: 210ms; }
-    .archive-img:nth-child(8)  { animation-delay: 240ms; }
-    .archive-img:nth-child(9)  { animation-delay: 270ms; }
-    .archive-img:nth-child(10) { animation-delay: 300ms; }
-    .archive-img:nth-child(11) { animation-delay: 330ms; }
-    .archive-img:nth-child(12) { animation-delay: 360ms; }
-    .archive-img:nth-child(13) { animation-delay: 390ms; }
-    .archive-img:nth-child(14) { animation-delay: 420ms; }
-    .archive-img:nth-child(15) { animation-delay: 450ms; }
-    .archive-img:nth-child(16) { animation-delay: 480ms; }
-    .archive-img:nth-child(17) { animation-delay: 510ms; }
-    .archive-img:nth-child(18) { animation-delay: 540ms; }
-
     @keyframes archiveIn {
-      from { opacity: 0; transform: translateY(12px); }
+      from { opacity: 0; transform: translateY(10px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
@@ -730,6 +689,7 @@
       from { opacity: 0; transform: translateY(16px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+
 
     @keyframes ring {
       0%   { transform: rotate(0deg); }
@@ -1019,6 +979,14 @@
       next.style.display = "";
       void next.offsetWidth;
       next.classList.add("active");
+
+      // Re-render archive fresh each visit so shuffle + masonry are correct
+      if (pageId === "archive") {
+        const grid = document.getElementById("archive-grid");
+        grid.innerHTML = "";
+        renderArchive();
+      }
+
       renderNav();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -1356,30 +1324,59 @@
     }
 
     /* ════════════════════════════════════════════════════════════════
-     * RENDER ARCHIVE GRID
+     * RENDER ARCHIVE GRID — masonry layout
      * Auto-loads images/archive/01.jpg → 99.jpg
      * Just drop numbered files in the folder — no code changes needed.
      * ════════════════════════════════════════════════════════════════ */
+    let archiveCells = [];
+
+    function masonryLayout() {
+      const grid = document.getElementById("archive-grid");
+      if (!grid || !archiveCells.length) return;
+
+      const GAP  = 6;
+      const W    = grid.offsetWidth;
+      const cols = W >= 1100 ? 5 : W >= 768 ? 3 : 2;
+      const colW = (W - GAP * (cols - 1)) / cols;
+      const colH = new Array(cols).fill(0);
+
+      archiveCells.forEach(cell => {
+        const img    = cell.querySelector("img");
+        const ratio  = img.naturalHeight / img.naturalWidth;
+        const height = colW * ratio;
+        const col    = colH.indexOf(Math.min(...colH));
+        const top    = colH[col] + (colH[col] > 0 ? GAP : 0);
+
+        cell.style.width  = colW + "px";
+        cell.style.left   = col * (colW + GAP) + "px";
+        cell.style.top    = top + "px";
+        colH[col]         = top + height;
+      });
+
+      grid.style.height = Math.max(...colH) + "px";
+    }
+
     function renderArchive() {
       const grid = document.getElementById("archive-grid");
-      const cells = [];
-      let archIndex = 1;
+      archiveCells = [];
+      let archIndex  = 1;
       let archMisses = 0;
       const MAX_MISSES = 3;
 
       function loadNextArchiveItem() {
         if (archMisses >= MAX_MISSES) {
-          // Done discovering — shuffle and show
-          for (let i = cells.length - 1; i > 0; i--) {
+          // Shuffle then lay out
+          for (let i = archiveCells.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [cells[i], cells[j]] = [cells[j], cells[i]];
+            [archiveCells[i], archiveCells[j]] = [archiveCells[j], archiveCells[i]];
           }
-          cells.forEach(c => grid.appendChild(c));
+          archiveCells.forEach(c => grid.appendChild(c));
+          masonryLayout();
           return;
         }
 
-        const i   = archIndex++;
-        const num = String(i).padStart(2, "0");
+        const i    = archIndex++;
+        const num  = String(i).padStart(2, "0");
         const webp = `images/archive/${num}.webp`;
         const jpg  = `images/archive/${num}.jpg`;
         const jpeg = `images/archive/${num}.jpeg`;
@@ -1396,21 +1393,15 @@
           cell.className = "archive-img";
           cell.appendChild(img);
           cell.addEventListener("click", () => openLightbox(img.src, "#d4d4d4"));
-          cells.push(cell);
+          archiveCells.push(cell);
           loadNextArchiveItem();
         };
 
         img.onerror = () => {
-          if (img.src.endsWith(".webp")) {
-            img.src = jpg;
-          } else if (img.src.endsWith(".jpg")) {
-            img.src = jpeg;
-          } else if (img.src.endsWith(".jpeg")) {
-            img.src = png;
-          } else {
-            archMisses++;
-            loadNextArchiveItem();
-          }
+          if      (img.src.endsWith(".webp"))  img.src = jpg;
+          else if (img.src.endsWith(".jpg"))   img.src = jpeg;
+          else if (img.src.endsWith(".jpeg"))  img.src = png;
+          else { archMisses++; loadNextArchiveItem(); }
         };
 
         img.src = webp;
@@ -1418,6 +1409,13 @@
 
       loadNextArchiveItem();
     }
+
+    // Re-layout on resize (debounced)
+    let resizeTimer;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(masonryLayout, 100);
+    });
 
     /* ════════════════════════════════════════════════════════════════
      * LIGHTBOX
