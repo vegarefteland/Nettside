@@ -489,17 +489,19 @@
       max-height: 88vh;
       object-fit: contain;
       border-radius: 6px;
-      transform: scale(0.93);
-      transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
-      box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+      filter: drop-shadow(0 24px 60px rgba(0,0,0,0.5));
     }
     #lightbox-color {
       width: min(90vw, 600px);
       height: min(90vw, 600px);
     }
-    .lightbox.open img,
-    .lightbox.open #lightbox-color {
-      transform: scale(1);
+    .lightbox.open #lightbox-wrap {
+      animation: lightboxBounce 550ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
+    }
+    @keyframes lightboxBounce {
+      0%   { transform: scale(0.92); }
+      60%  { transform: scale(1.02); }
+      100% { transform: scale(1); }
     }
     .lightbox-close {
       position: absolute;
@@ -834,7 +836,7 @@
       <footer class="about-footer">
         <!-- ↓ Edit footer ↓ -->
         Copyright ©2026 Vegar Efteland Melhus, All rights reserved
-        <span style="margin-left: 16px; opacity: 0.4;">v.08</span>
+        <span style="margin-left: 16px; opacity: 0.4;">v.09</span>
       </footer>
 
     </div>
@@ -863,8 +865,10 @@
         <path d="M1 1L11 11M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
     </button>
-    <img id="lightbox-img" src="" alt="" style="display:none">
-    <div id="lightbox-color" style="display:none; width:min(90vw,600px); height:min(90vw,600px); border-radius:6px;"></div>
+    <div id="lightbox-wrap">
+      <img id="lightbox-img" src="" alt="" style="display:none">
+      <div id="lightbox-color" style="display:none; width:min(90vw,600px); height:min(90vw,600px); border-radius:6px;"></div>
+    </div>
   </div>
 
   <!-- ══════════════════════════════════════════════════════════════
@@ -903,91 +907,8 @@
   </nav>
 
 
+  <script src="content.js"></script>
   <script>
-    /* ════════════════════════════════════════════════════════════════
-     * SITE CONFIG — Edit everything here to update the portfolio
-     * ════════════════════════════════════════════════════════════════ */
-    const SITE = {
-      name: "Vegar Efteland",       // ← Your name (shown in nav on home page)
-
-      /* ── Projects ────────────────────────────────────────────────
-       * cover:       grid thumbnail  → images/projects/01/cover.jpg
-       * folder:      subfolder name  → images/projects/01/
-       * Images inside folder: 01.jpg (hero), 02.jpg, 03.jpg … 09.jpg
-       * description: shown on project page (use \n for paragraph break)
-       * ──────────────────────────────────────────────────────────── */
-      projects: [
-        {
-          title: "F1 – Team Merch",
-          folder: "01",
-          cover: "images/projects/01/cover.jpg",
-          color: "#C8B8A2",
-          description: "Ongoing personal project.\n\nDesigning retro inspired formula 1 merch for every team on the grid.",
-        },
-        {
-          title: "F1 – Track Merch",
-          folder: "02",
-          cover: "images/projects/02/cover.jpg",
-          color: "#1C1C1E",
-          description: "Edit this description in index.html under SITE.projects.\n\nDescribe the project, your role, the brief, and what makes it interesting.",
-        },
-        {
-          title: "Poster Design",
-          folder: "03",
-          cover: "images/projects/03/cover.jpg",
-          color: "#E8E0D5",
-          layout: "grid",  // 2-column grid for all images
-          description: "Selected poster design projects.\n\nSchool assignments and concept design work.",
-        },
-        {
-          title: "3D Modeling",
-          folder: "04",
-          cover: "images/projects/04/cover.jpg",
-          color: "#3D4A5C",
-          description: "Modular Desk Interface concept. Inspired by the design language of Braun and Teenage Engineering. Built around physical buttons and knobs, materials include sandblasted steel with a matte finish.\n\nModeled and rendered in Blender.",
-        },
-        {
-          title: "Motion Graphics",
-          folder: "05",
-          cover: "images/projects/05/cover.jpg",
-          color: "#D4C5B0",
-          description: "Promotional showcase video highlighting motion and design work.\n\nCreated in After Effects and Premiere Pro.",
-        },
-        {
-          title: "Personal Branding",
-          folder: "06",
-          cover: "images/projects/06/cover.jpg",
-          color: "#F0EBE3",
-          description: "Edit this description in index.html under SITE.projects.\n\nDescribe the project, your role, the brief, and what makes it interesting.",
-        },
-      ],
-
-      /* ── Archive items ─────────────────────────────────────────────
-       * image:  URL or relative path, or "" for a color placeholder
-       * color:  CSS color used when image is ""
-       * span:   "wide" | "tall" | "big" | "" for normal
-       * ──────────────────────────────────────────────────────────── */
-      archive: [
-        { image: "https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/481a19ac-bb53-47d0-8e4c-87b1f5a27d0d_rwc_0x0x833x651x32.png" },
-        { image: "https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/d2d5ade0-65b9-4834-acbd-793ebebb09fb_rwc_0x724x1920x1501x32.png" },
-        { image: "",  color: "#4A90E2" },
-        { image: "",  color: "#1a1a1a" },
-        { image: "",  color: "#E8D5B7" },
-        { image: "https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/a7f2e192-ef0b-4b09-b308-74844a2b8bd9_rwc_0x0x833x651x32.png" },
-        { image: "",  color: "#F2E8FF" },
-        { image: "",  color: "#111111" },
-        { image: "https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/26c1bd1c-ddfb-4b27-8c0e-294607985bad_rwc_102x0x1181x924x32.png" },
-        { image: "",  color: "#C8E6C9" },
-        { image: "",  color: "#FFE082" },
-        { image: "https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/16ea41c9-bc47-42da-8d4d-7b28d5ecaa50_rwc_649x0x1699x1329x32.jpg" },
-        { image: "",  color: "#FF7043" },
-        { image: "",  color: "#e0e0e0" },
-        { image: "https://cdn.myportfolio.com/b7705045-64bb-459b-a588-f10df9178a5a/615425ca-5521-4c53-9d93-1efaebf87df8_rwc_2721x53x833x652x32.png" },
-        { image: "",  color: "#263238" },
-        { image: "",  color: "#d4d4d4" },
-        { image: "",  color: "#f5f5f5" },
-      ],
-    };
 
     /* ════════════════════════════════════════════════════════════════
      * NAVIGATION
@@ -1137,7 +1058,6 @@
           img.onload = () => {
             projMisses = 0;
             item.classList.add("loaded");
-            item.style.cursor = "zoom-in";
             item.addEventListener("click", () => openLightbox(img.src, "#d4d4d4"));
             loadNextProjectItem();
           };
@@ -1346,7 +1266,6 @@
         card.appendChild(label);
         card.appendChild(arrow);
 
-        card.style.cursor = "pointer";
         card.addEventListener("click", () => openProject(project));
         card.addEventListener("keydown", e => {
           if (e.key === "Enter") openProject(project);
@@ -1466,6 +1385,7 @@
     const lightboxClose = document.getElementById("lightbox-close");
 
     const lightboxColor = document.getElementById("lightbox-color");
+    const lightboxWrap  = document.getElementById("lightbox-wrap");
 
     function showColor(color) {
       lightboxImg.style.display = "none";
@@ -1476,6 +1396,11 @@
     function openLightbox(src, color) {
       lightboxColor.style.display = "none";
       lightboxImg.style.display = "none";
+
+      // Reset animation so it replays on every open
+      lightboxWrap.style.animation = "none";
+      void lightboxWrap.offsetWidth;
+      lightboxWrap.style.animation = "";
 
       if (src) {
         lightboxImg.src = "";
@@ -1535,6 +1460,10 @@
      * CUSTOM CURSOR — trailing dot (pointer devices only)
      * ════════════════════════════════════════════════════════════════ */
     if (window.matchMedia('(pointer: fine)').matches) {
+      // Force hide the native cursor at the root level
+      document.documentElement.style.setProperty('cursor', 'none', 'important');
+      document.body.style.setProperty('cursor', 'none', 'important');
+
       const dot = document.createElement('div');
       dot.className = 'cursor-dot';
       document.body.appendChild(dot);
@@ -1564,7 +1493,6 @@
     }
 
     /* ── Easter egg — confetti on name click ── */
-    document.querySelector('.nav-pill-name').style.cursor = 'pointer';
 
     document.querySelector('.nav-pill-name').addEventListener('click', function () {
       const rect    = this.getBoundingClientRect();
