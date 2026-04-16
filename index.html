@@ -564,12 +564,19 @@
       width: 100%;
       border-radius: 6px;
       overflow: hidden;
+      opacity: 0;
     }
 
     .project-img-item {
       position: relative;
       border-radius: 6px;
       overflow: hidden;
+      opacity: 0;
+    }
+
+    .project-hero.loaded,
+    .project-img-item.loaded {
+      animation: archiveIn 350ms var(--ease-out) both;
     }
 
 
@@ -798,7 +805,7 @@
       <footer class="about-footer">
         <!-- ↓ Edit footer ↓ -->
         Copyright ©2026 Vegar Efteland Melhus, All rights reserved
-        <span style="margin-left: 16px; opacity: 0.4;">v.07</span>
+        <span style="margin-left: 16px; opacity: 0.4;">v.08</span>
       </footer>
 
     </div>
