@@ -525,6 +525,38 @@
     .lightbox-close:hover { background: var(--nav-bg); opacity: 0.75; box-shadow: var(--hover-shadow); }
     [data-theme="dark"] .lightbox-close { border-color: rgba(255,255,255,0.07); }
 
+    .lightbox-prev,
+    .lightbox-next {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36px;
+      height: 36px;
+      background: var(--nav-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(0, 0, 0, 0.07);
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      border-radius: 100px;
+      color: var(--fg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 250ms ease, box-shadow 250ms ease;
+    }
+    .lightbox-prev { left: 20px; }
+    .lightbox-next { right: 20px; }
+    .lightbox.open .lightbox-prev,
+    .lightbox.open .lightbox-next { opacity: 1; pointer-events: all; }
+    .lightbox-prev:hover,
+    .lightbox-next:hover { opacity: 0.75; box-shadow: var(--hover-shadow); }
+    [data-theme="dark"] .lightbox-prev,
+    [data-theme="dark"] .lightbox-next { border-color: rgba(255,255,255,0.07); }
+    .lightbox-prev.hidden,
+    .lightbox-next.hidden { opacity: 0 !important; pointer-events: none; }
+
     .archive-img { cursor: zoom-in; }
 
     /* ─── Project Detail Page ────────────────────────────────── */
@@ -836,7 +868,7 @@
       <footer class="about-footer">
         <!-- ↓ Edit footer ↓ -->
         Copyright ©2026 Vegar Efteland Melhus, All rights reserved
-        <span style="margin-left: 16px; opacity: 0.4;">v.09</span>
+        <span style="margin-left: 16px; opacity: 0.4;">v1.0</span>
       </footer>
 
     </div>
@@ -863,6 +895,16 @@
     <button class="lightbox-close" id="lightbox-close" aria-label="Close">
       <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" width="12" height="12">
         <path d="M1 1L11 11M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <button class="lightbox-prev" id="lightbox-prev" aria-label="Previous">
+      <svg viewBox="0 0 12 12" fill="none" width="12" height="12">
+        <path d="M7.5 2L2.5 6L7.5 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <button class="lightbox-next" id="lightbox-next" aria-label="Next">
+      <svg viewBox="0 0 12 12" fill="none" width="12" height="12">
+        <path d="M4.5 2L9.5 6L4.5 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
     <div id="lightbox-wrap">
@@ -1380,12 +1422,24 @@
     /* ════════════════════════════════════════════════════════════════
      * LIGHTBOX
      * ════════════════════════════════════════════════════════════════ */
-    const lightbox     = document.getElementById("lightbox");
-    const lightboxImg  = document.getElementById("lightbox-img");
+    const lightbox      = document.getElementById("lightbox");
+    const lightboxImg   = document.getElementById("lightbox-img");
     const lightboxClose = document.getElementById("lightbox-close");
-
     const lightboxColor = document.getElementById("lightbox-color");
     const lightboxWrap  = document.getElementById("lightbox-wrap");
+    const lightboxPrev  = document.getElementById("lightbox-prev");
+    const lightboxNext  = document.getElementById("lightbox-next");
+
+    let lbGallery = [];
+    let lbIndex   = 0;
+
+    function buildGallery() {
+      // Collect all loaded clickable images on the current page
+      const sel = '.archive-img img, .project-hero img, .project-img-item img';
+      return Array.from(document.querySelectorAll(sel))
+        .filter(img => img.naturalWidth > 0)
+        .map(img => ({ src: img.src, color: "#d4d4d4" }));
+    }
 
     function showColor(color) {
       lightboxImg.style.display = "none";
@@ -1393,24 +1447,39 @@
       lightboxColor.style.background = color;
     }
 
-    function openLightbox(src, color) {
+    function showLightboxItem(index, animate) {
+      const item = lbGallery[index];
+
       lightboxColor.style.display = "none";
-      lightboxImg.style.display = "none";
+      lightboxImg.style.display   = "none";
 
-      // Reset animation so it replays on every open
-      lightboxWrap.style.animation = "none";
-      void lightboxWrap.offsetWidth;
-      lightboxWrap.style.animation = "";
-
-      if (src) {
-        lightboxImg.src = "";
-        lightboxImg.onerror = () => showColor(color);
-        lightboxImg.onload  = () => { lightboxImg.style.display = "block"; };
-        lightboxImg.src = src;
-      } else {
-        showColor(color);
+      if (animate !== false) {
+        lightboxWrap.style.animation = "none";
+        void lightboxWrap.offsetWidth;
+        lightboxWrap.style.animation = "";
       }
 
+      if (item && item.src) {
+        lightboxImg.src = "";
+        lightboxImg.onerror = () => showColor(item.color);
+        lightboxImg.onload  = () => { lightboxImg.style.display = "block"; };
+        lightboxImg.src = item.src;
+      } else if (item) {
+        showColor(item.color);
+      }
+
+      // Show/hide arrows
+      const single = lbGallery.length <= 1;
+      lightboxPrev.classList.toggle("hidden", single || index === 0);
+      lightboxNext.classList.toggle("hidden", single || index === lbGallery.length - 1);
+    }
+
+    function openLightbox(src, color) {
+      lbGallery = buildGallery();
+      lbIndex   = lbGallery.findIndex(i => i.src === src);
+      if (lbIndex === -1) { lbGallery = [{ src, color }]; lbIndex = 0; }
+
+      showLightboxItem(lbIndex);
       lightbox.classList.add("open");
       document.body.style.overflow = "hidden";
     }
@@ -1420,9 +1489,21 @@
       document.body.style.overflow = "";
     }
 
+    lightboxPrev.addEventListener("click", () => {
+      if (lbIndex > 0) { lbIndex--; showLightboxItem(lbIndex); }
+    });
+    lightboxNext.addEventListener("click", () => {
+      if (lbIndex < lbGallery.length - 1) { lbIndex++; showLightboxItem(lbIndex); }
+    });
+
     lightboxClose.addEventListener("click", closeLightbox);
     lightbox.addEventListener("click", e => { if (e.target === lightbox) closeLightbox(); });
-    document.addEventListener("keydown", e => { if (e.key === "Escape") closeLightbox(); });
+    document.addEventListener("keydown", e => {
+      if (!lightbox.classList.contains("open")) return;
+      if (e.key === "Escape")     closeLightbox();
+      if (e.key === "ArrowLeft"  && lbIndex > 0)                    { lbIndex--; showLightboxItem(lbIndex); }
+      if (e.key === "ArrowRight" && lbIndex < lbGallery.length - 1) { lbIndex++; showLightboxItem(lbIndex); }
+    });
 
     /* ════════════════════════════════════════════════════════════════
      * THEME
@@ -1492,52 +1573,6 @@
       document.addEventListener('mouseenter', () => dot.classList.remove('cur-hidden'));
     }
 
-    /* ── Easter egg — confetti on name click ── */
-
-    document.querySelector('.nav-pill-name').addEventListener('click', function () {
-      const rect    = this.getBoundingClientRect();
-      const originX = rect.left + rect.width / 2;
-      const originY = rect.top  + rect.height / 2;
-      const colors  = ['#0a0a0a', '#888', '#ccc', '#fff', '#555'];
-      const count   = 28;
-
-      for (let i = 0; i < count; i++) {
-        const el = document.createElement('div');
-        const size  = Math.random() * 6 + 4;
-        const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 120 + 60;
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        const spin  = (Math.random() - 0.5) * 720;
-
-        el.style.cssText = `
-          position: fixed;
-          left: ${originX}px;
-          top:  ${originY}px;
-          width: ${size}px;
-          height: ${size}px;
-          background: ${color};
-          border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
-          pointer-events: none;
-          z-index: 9999;
-          transform-origin: center;
-        `;
-        document.body.appendChild(el);
-
-        const start = performance.now();
-        const dur   = 700 + Math.random() * 300;
-
-        (function animate(now) {
-          const t  = Math.min((now - start) / dur, 1);
-          const ease = 1 - Math.pow(1 - t, 3);
-          const x  = Math.cos(angle) * speed * ease;
-          const y  = Math.sin(angle) * speed * ease + 80 * t * t;
-          el.style.transform = `translate(${x}px, ${y}px) rotate(${spin * t}deg)`;
-          el.style.opacity   = 1 - t;
-          if (t < 1) requestAnimationFrame(animate);
-          else el.remove();
-        })(start);
-      }
-    });
 
 
   </script>
