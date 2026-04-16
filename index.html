@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
-  <title>Vegar Efteland</title>
+  <title>Vegarem | Design & Visuals</title>
   <link rel="icon" href="images/favicon.png" type="image/png">
   <link rel="preload" as="image" href="images/projects/01/cover.webp" fetchpriority="high">
   <link rel="preload" as="image" href="images/projects/02/cover.webp" fetchpriority="high">
@@ -714,6 +714,35 @@
     .project-card:hover .project-arrow svg {
       animation: ring 0.7s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
       transform-origin: center;
+    }
+
+    /* ─── Custom cursor — trailing dot (pointer devices only) ───── */
+    @media (pointer: fine) {
+      * { cursor: none !important; }
+      input, textarea, select { cursor: text !important; }
+
+      .cursor-dot {
+        position: fixed;
+        top: 0; left: 0;
+        width: 7px;
+        height: 7px;
+        background: var(--fg);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9999;
+        transform: translate(-50%, -50%) scale(1);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+        transition: transform 250ms var(--ease-out), opacity 200ms ease,
+                    background var(--theme-transition), box-shadow var(--theme-transition);
+        will-change: left, top;
+      }
+
+      [data-theme="dark"] .cursor-dot {
+        box-shadow: 0 0 8px rgba(255, 255, 255, 0.45);
+      }
+
+      .cursor-dot.cur-hover  { transform: translate(-50%, -50%) scale(1.9); }
+      .cursor-dot.cur-hidden { opacity: 0; }
     }
 
   </style>
@@ -1501,6 +1530,38 @@
     restoreFromPath();
     renderNav();
 
+
+    /* ════════════════════════════════════════════════════════════════
+     * CUSTOM CURSOR — trailing dot (pointer devices only)
+     * ════════════════════════════════════════════════════════════════ */
+    if (window.matchMedia('(pointer: fine)').matches) {
+      const dot = document.createElement('div');
+      dot.className = 'cursor-dot';
+      document.body.appendChild(dot);
+
+      let mx = 0, my = 0, cx = 0, cy = 0;
+
+      document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+
+      (function animate() {
+        cx += (mx - cx) * 0.14;
+        cy += (my - cy) * 0.14;
+        dot.style.left = cx + 'px';
+        dot.style.top  = cy + 'px';
+        requestAnimationFrame(animate);
+      })();
+
+      const HOVER_SEL = 'a, button, [role="button"], .project-card, .archive-img, .lightbox-close, [tabindex]';
+      document.addEventListener('mouseover', e => {
+        if (e.target.closest(HOVER_SEL)) dot.classList.add('cur-hover');
+      });
+      document.addEventListener('mouseout', e => {
+        if (e.target.closest(HOVER_SEL)) dot.classList.remove('cur-hover');
+      });
+
+      document.addEventListener('mouseleave', () => dot.classList.add('cur-hidden'));
+      document.addEventListener('mouseenter', () => dot.classList.remove('cur-hidden'));
+    }
 
     /* ── Easter egg — confetti on name click ── */
     document.querySelector('.nav-pill-name').style.cursor = 'pointer';
