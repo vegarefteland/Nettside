@@ -447,6 +447,7 @@
       overflow: hidden;
       border-radius: 6px;
       animation: archiveIn 350ms var(--ease-out) both;
+      transition: top 450ms var(--ease-out), left 450ms var(--ease-out);
     }
 
     .archive-img img {
@@ -797,7 +798,7 @@
       <footer class="about-footer">
         <!-- ↓ Edit footer ↓ -->
         Copyright ©2026 Vegar Efteland Melhus, All rights reserved
-        <span style="margin-left: 16px; opacity: 0.4;">v.05</span>
+        <span style="margin-left: 16px; opacity: 0.4;">v.06</span>
       </footer>
 
     </div>
@@ -1063,7 +1064,7 @@
 
       let projIndex = 1;
       let projMisses = 0;
-      const MAX_MISSES = 3;
+      const MAX_MISSES = 1;
 
       function loadNextProjectItem() {
         if (projMisses >= MAX_MISSES) return;
@@ -1074,6 +1075,7 @@
         const jpg  = `images/projects/${project.folder}/${num}.jpg`;
         const jpeg = `images/projects/${project.folder}/${num}.jpeg`;
         const png  = `images/projects/${project.folder}/${num}.png`;
+        const gif  = `images/projects/${project.folder}/${num}.gif`;
 
         const target = project.layout === "grid" ? container : right;
 
@@ -1108,13 +1110,11 @@
             loadNextProjectItem();
           };
           img.onerror = () => {
-            if (img.src.endsWith(".webp")) {
-              img.src = jpg;
-            } else if (img.src.endsWith(".jpg")) {
-              img.src = jpeg;
-            } else if (img.src.endsWith(".jpeg")) {
-              img.src = png;
-            } else {
+            if      (img.src.endsWith(".webp"))  img.src = jpg;
+            else if (img.src.endsWith(".jpg"))   img.src = jpeg;
+            else if (img.src.endsWith(".jpeg"))  img.src = png;
+            else if (img.src.endsWith(".png"))   img.src = gif;
+            else {
               item.remove();
               projMisses++;
               loadNextProjectItem();
@@ -1295,7 +1295,7 @@
         </svg>`;
 
         const img = document.createElement("img");
-        const coverWebp = project.cover.replace(/\.(jpg|png)$/, ".webp");
+        const coverWebp = project.cover.replace(/\.(jpg|jpeg|png|gif)$/, ".webp");
         img.src = coverWebp;
         img.alt = project.title;
         img.loading = "lazy";
@@ -1304,7 +1304,7 @@
         img.height = 600;
         img.onerror = function () {
           if (img.src.endsWith(".webp")) {
-            img.src = project.cover; // fall back to original jpg
+            img.src = project.cover; // fall back to original (jpg/gif/png/etc.)
           } else {
             this.style.display = "none";
           }
@@ -1364,18 +1364,17 @@
       const gen = ++archiveGen; // this load's generation — stale callbacks bail early
       let archIndex  = 1;
       let archMisses = 0;
-      const MAX_MISSES = 3;
+      const MAX_MISSES = 1;
 
       function loadNextArchiveItem() {
         if (gen !== archiveGen) return; // stale — a newer render started
         if (archMisses >= MAX_MISSES) {
-          // Shuffle then lay out
+          // All images found — shuffle positions with a smooth CSS transition
           for (let i = archiveCells.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [archiveCells[i], archiveCells[j]] = [archiveCells[j], archiveCells[i]];
           }
-          archiveCells.forEach(c => grid.appendChild(c));
-          masonryLayout();
+          masonryLayout(); // cells already in DOM; transition animates them to new spots
           return;
         }
 
@@ -1385,6 +1384,7 @@
         const jpg  = `images/archive/${num}.jpg`;
         const jpeg = `images/archive/${num}.jpeg`;
         const png  = `images/archive/${num}.png`;
+        const gif  = `images/archive/${num}.gif`;
 
         const img = new Image();
         img.alt = "";
@@ -1399,6 +1399,8 @@
           cell.appendChild(img);
           cell.addEventListener("click", () => openLightbox(img.src, "#d4d4d4"));
           archiveCells.push(cell);
+          grid.appendChild(cell); // show immediately — no waiting for all images
+          masonryLayout();        // re-layout with the new cell in place
           loadNextArchiveItem();
         };
 
@@ -1407,6 +1409,7 @@
           if      (img.src.endsWith(".webp"))  img.src = jpg;
           else if (img.src.endsWith(".jpg"))   img.src = jpeg;
           else if (img.src.endsWith(".jpeg"))  img.src = png;
+          else if (img.src.endsWith(".png"))   img.src = gif;
           else { archMisses++; loadNextArchiveItem(); }
         };
 
