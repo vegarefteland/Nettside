@@ -540,6 +540,9 @@
     [data-theme="dark"] .lightbox-next { border-color: rgba(255,255,255,0.07); }
     .lightbox-prev.hidden,
     .lightbox-next.hidden { opacity: 0 !important; pointer-events: none; }
+    @media (max-width: 600px) {
+      .lightbox-prev, .lightbox-next { display: none !important; }
+    }
 
     .archive-img { cursor: zoom-in; }
 
@@ -1433,6 +1436,23 @@
 
     lightboxClose.addEventListener("click", closeLightbox);
     lightbox.addEventListener("click", e => { if (e.target === lightbox) closeLightbox(); });
+
+    // Swipe support
+    let touchStartX = 0;
+    let touchStartY = 0;
+    lightbox.addEventListener("touchstart", e => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    lightbox.addEventListener("touchend", e => {
+      if (!lightbox.classList.contains("open")) return;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+      if (dx < 0 && lbIndex < lbGallery.length - 1) { lbIndex++; showLightboxItem(lbIndex); }
+      if (dx > 0 && lbIndex > 0)                    { lbIndex--; showLightboxItem(lbIndex); }
+    }, { passive: true });
+
     document.addEventListener("keydown", e => {
       if (!lightbox.classList.contains("open")) return;
       if (e.key === "Escape")     closeLightbox();
