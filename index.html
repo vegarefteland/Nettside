@@ -35,7 +35,6 @@
       --gap:        6px;
       --font:       'Inter', system-ui, sans-serif;
       --ease-out:   cubic-bezier(0.22, 1, 0.36, 1);
-      --ease-in:    cubic-bezier(0.4, 0, 1, 1);
       --theme-transition: 350ms ease;
     }
 
@@ -258,7 +257,6 @@
       cursor: pointer;
       background: var(--placeholder);
       border-radius: 6px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0);
       transition: box-shadow 250ms ease;
     }
     .project-card:hover {
@@ -365,23 +363,9 @@
       line-height: 1.5;
     }
 
-    .entry-year {
-      color: var(--muted);
-      min-width: 100px;
-      flex-shrink: 0;
-    }
-
     .entry-name {
       font-weight: 500;
     }
-
-    .entry-link {
-      color: var(--fg);
-      border-bottom: 1px solid var(--fg);
-      padding-bottom: 1px;
-      transition: opacity 180ms ease;
-    }
-    .entry-link:hover { opacity: 0.5; }
 
     .contact-grid {
       display: grid;
@@ -522,7 +506,7 @@
       justify-content: center;
       transition: opacity 180ms ease, box-shadow 250ms ease;
     }
-    .lightbox-close:hover { background: var(--nav-bg); opacity: 0.75; box-shadow: var(--hover-shadow); }
+    .lightbox-close:hover { opacity: 0.75; box-shadow: var(--hover-shadow); }
     [data-theme="dark"] .lightbox-close { border-color: rgba(255,255,255,0.07); }
 
     .lightbox-prev,
@@ -573,7 +557,6 @@
     }
 
     .project-left .section-tag {
-      display: inline-block;
       margin-bottom: 16px;
     }
 
@@ -613,12 +596,6 @@
       animation: archiveIn 350ms var(--ease-out) both;
     }
 
-
-    .project-hero img {
-      width: 100%;
-      height: auto;
-      display: block;
-    }
 
     .project-img-grid {
       display: grid;
@@ -750,34 +727,6 @@
       transform-origin: center;
     }
 
-    /* ─── Custom cursor — trailing dot (pointer devices only) ───── */
-    @media (pointer: fine) {
-      * { cursor: none !important; }
-      input, textarea, select { cursor: text !important; }
-
-      .cursor-dot {
-        position: fixed;
-        top: 0; left: 0;
-        width: 7px;
-        height: 7px;
-        background: var(--fg);
-        border-radius: 50%;
-        pointer-events: none;
-        z-index: 9999;
-        transform: translate(-50%, -50%) scale(1);
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
-        transition: transform 250ms var(--ease-out), opacity 200ms ease,
-                    background var(--theme-transition), box-shadow var(--theme-transition);
-        will-change: left, top;
-      }
-
-      [data-theme="dark"] .cursor-dot {
-        box-shadow: 0 0 8px rgba(255, 255, 255, 0.45);
-      }
-
-      .cursor-dot.cur-hover  { transform: translate(-50%, -50%) scale(1.9); }
-      .cursor-dot.cur-hidden { opacity: 0; }
-    }
 
   </style>
 </head>
@@ -786,7 +735,7 @@
 
   <!-- ══════════════════════════════════════════════════════════════
        HOME PAGE — Project grid
-       To add/remove projects: edit the PROJECTS array in the script.
+       To add/remove projects: edit content.js
        ══════════════════════════════════════════════════════════════ -->
   <main id="page-home" class="page active" role="main">
     <div class="project-grid" id="project-grid"></div>
@@ -876,7 +825,7 @@
 
   <!-- ══════════════════════════════════════════════════════════════
        ARCHIVE PAGE
-       To add archive images: edit the ARCHIVE array in the script.
+       Drop numbered images into images/archive/ — no code changes needed.
        ══════════════════════════════════════════════════════════════ -->
   <section id="page-archive" class="page" aria-label="Archive">
     <p class="archive-intro">
@@ -955,12 +904,6 @@
     /* ════════════════════════════════════════════════════════════════
      * NAVIGATION
      * ════════════════════════════════════════════════════════════════ */
-    const pages = [
-      { id: "home",    label: "Home" },
-      { id: "about",   label: "About" },
-      { id: "archive", label: "Archive" },
-    ];
-
     let currentPage    = "home";
     let currentProject = null;
 
@@ -1005,7 +948,8 @@
 
     function openProject(project) {
       currentProject = project;
-      pushPath("/" + slugify(project.title), { page: "project", slug: slugify(project.title) });
+      const slug = slugify(project.title);
+      pushPath("/" + slug, { page: "project", slug });
       renderProjectPage(project);
       showPage("project");
     }
@@ -1065,12 +1009,13 @@
         if (projMisses >= MAX_MISSES) return;
         const i = projIndex++;
         const num  = String(i).padStart(2, "0");
-        const mp4  = `images/projects/${project.folder}/${num}.mp4`;
-        const webp = `images/projects/${project.folder}/${num}.webp`;
-        const jpg  = `images/projects/${project.folder}/${num}.jpg`;
-        const jpeg = `images/projects/${project.folder}/${num}.jpeg`;
-        const png  = `images/projects/${project.folder}/${num}.png`;
-        const gif  = `images/projects/${project.folder}/${num}.gif`;
+        const base = `images/projects/${project.folder}/${num}`;
+        const mp4  = `${base}.mp4`;
+        const webp = `${base}.webp`;
+        const jpg  = `${base}.jpg`;
+        const jpeg = `${base}.jpeg`;
+        const png  = `${base}.png`;
+        const gif  = `${base}.gif`;
 
         const target = project.layout === "grid" ? container : right;
 
@@ -1289,20 +1234,13 @@
         </svg>`;
 
         const img = document.createElement("img");
-        const coverWebp = project.cover.replace(/\.(jpg|jpeg|png|gif)$/, ".webp");
-        img.src = coverWebp;
+        img.src = project.cover;
         img.alt = project.title;
         img.loading = "lazy";
         img.decoding = "async";
         img.width = 800;
         img.height = 600;
-        img.onerror = function () {
-          if (img.src.endsWith(".webp")) {
-            img.src = project.cover; // fall back to original (jpg/gif/png/etc.)
-          } else {
-            this.style.display = "none";
-          }
-        };
+        img.onerror = function () { this.style.display = "none"; };
 
         card.appendChild(img);
         card.appendChild(label);
@@ -1319,8 +1257,7 @@
 
     /* ════════════════════════════════════════════════════════════════
      * RENDER ARCHIVE GRID — masonry layout
-     * Auto-loads images/archive/01.jpg → 99.jpg
-     * Just drop numbered files in the folder — no code changes needed.
+     * Drop numbered .webp files into images/archive/ — auto-discovered.
      * ════════════════════════════════════════════════════════════════ */
     let archiveCells = [];
     let archiveGen   = 0; // incremented each render to cancel stale loads
@@ -1447,17 +1384,15 @@
       lightboxColor.style.background = color;
     }
 
-    function showLightboxItem(index, animate) {
+    function showLightboxItem(index) {
       const item = lbGallery[index];
 
       lightboxColor.style.display = "none";
       lightboxImg.style.display   = "none";
 
-      if (animate !== false) {
-        lightboxWrap.style.animation = "none";
-        void lightboxWrap.offsetWidth;
-        lightboxWrap.style.animation = "";
-      }
+      lightboxWrap.style.animation = "none";
+      void lightboxWrap.offsetWidth;
+      lightboxWrap.style.animation = "";
 
       if (item && item.src) {
         lightboxImg.src = "";
@@ -1535,45 +1470,6 @@
 
     restoreFromPath();
     renderNav();
-
-
-    /* ════════════════════════════════════════════════════════════════
-     * CUSTOM CURSOR — trailing dot (pointer devices only)
-     * ════════════════════════════════════════════════════════════════ */
-    if (window.matchMedia('(pointer: fine)').matches) {
-      // Force hide the native cursor at the root level
-      document.documentElement.style.setProperty('cursor', 'none', 'important');
-      document.body.style.setProperty('cursor', 'none', 'important');
-
-      const dot = document.createElement('div');
-      dot.className = 'cursor-dot';
-      document.body.appendChild(dot);
-
-      let mx = 0, my = 0, cx = 0, cy = 0;
-
-      document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
-
-      (function animate() {
-        cx += (mx - cx) * 0.14;
-        cy += (my - cy) * 0.14;
-        dot.style.left = cx + 'px';
-        dot.style.top  = cy + 'px';
-        requestAnimationFrame(animate);
-      })();
-
-      const HOVER_SEL = 'a, button, [role="button"], .project-card, .archive-img, .lightbox-close, [tabindex]';
-      document.addEventListener('mouseover', e => {
-        if (e.target.closest(HOVER_SEL)) dot.classList.add('cur-hover');
-      });
-      document.addEventListener('mouseout', e => {
-        if (e.target.closest(HOVER_SEL)) dot.classList.remove('cur-hover');
-      });
-
-      document.addEventListener('mouseleave', () => dot.classList.add('cur-hidden'));
-      document.addEventListener('mouseenter', () => dot.classList.remove('cur-hidden'));
-    }
-
-
 
   </script>
 

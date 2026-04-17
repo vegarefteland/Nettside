@@ -34,7 +34,12 @@
       "Bash(sips -s format webp /Users/vegarefteland/Desktop/nettside/images/projects/03/cover.jpg --out /tmp/test.webp)",
       "Bash(ffmpeg -i /Users/vegarefteland/Desktop/nettside/images/projects/03/cover.jpg -quality 82 /tmp/test.webp)",
       "Bash(brew list:*)",
-      "Bash(find /Users/vegarefteland/Desktop/nettside/images/projects -name \"*.png\" -delete)"
+      "Bash(find /Users/vegarefteland/Desktop/nettside/images/projects -name \"*.png\" -delete)",
+      "Bash(mv 02.png 01.png)",
+      "Bash(mv 03.png 02.png)",
+      "Bash(mv 04.png 03.png)",
+      "Bash(mv 05.png 04.png)",
+      "Bash(mv 06.png 05.png)"
     ]
   }
 }

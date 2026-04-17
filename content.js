@@ -19,7 +19,7 @@ const SITE = {
     {
       title: "F1 – Team Merch",
       folder: "01",
-      cover: "images/projects/01/cover.jpg",
+      cover: "images/projects/01/cover.webp",
       color: "#C8B8A2",
       description:
         "Ongoing personal project.\n\n" +
@@ -28,7 +28,7 @@ const SITE = {
     {
       title: "F1 – Track Merch",
       folder: "02",
-      cover: "images/projects/02/cover.jpg",
+      cover: "images/projects/02/cover.webp",
       color: "#1C1C1E",
       description:
         "Edit this description in content.js.\n\n" +
@@ -37,7 +37,7 @@ const SITE = {
     {
       title: "Poster Design",
       folder: "03",
-      cover: "images/projects/03/cover.jpg",
+      cover: "images/projects/03/cover.webp",
       color: "#E8E0D5",
       layout: "grid",
       description:
@@ -47,7 +47,7 @@ const SITE = {
     {
       title: "3D Modeling",
       folder: "04",
-      cover: "images/projects/04/cover.jpg",
+      cover: "images/projects/04/cover.webp",
       color: "#3D4A5C",
       description:
         "Modular Desk Interface concept. Inspired by the design language of Braun and Teenage Engineering. " +
@@ -57,7 +57,7 @@ const SITE = {
     {
       title: "Motion Graphics",
       folder: "05",
-      cover: "images/projects/05/cover.jpg",
+      cover: "images/projects/05/cover.webp",
       color: "#D4C5B0",
       description:
         "Promotional showcase video highlighting motion and design work.\n\n" +
@@ -66,7 +66,7 @@ const SITE = {
     {
       title: "Personal Branding",
       folder: "06",
-      cover: "images/projects/06/cover.jpg",
+      cover: "images/projects/06/cover.webp",
       color: "#F0EBE3",
       description:
         "Edit this description in content.js.\n\n" +
