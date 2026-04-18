@@ -1032,13 +1032,10 @@
         video.setAttribute("playsinline", "");
         video.setAttribute("preload", "metadata");
 
-        video.addEventListener("canplay", () => {
-          projMisses = 0;
-          item.classList.add("loaded");
-          loadNextProjectItem();
-        }, { once: true });
+        // 0 = trying _player.mp4, 1 = trying plain .mp4, 2+ = give up
+        let videoAttempt = 0;
 
-        video.addEventListener("error", function () {
+        function fallbackToImages() {
           wrap.remove();
           const img = document.createElement("img");
           img.alt = i === 1 ? project.title : "";
@@ -1064,14 +1061,36 @@
           };
           img.src = webp;
           item.appendChild(img);
+        }
+
+        video.addEventListener("canplay", () => {
+          projMisses = 0;
+          item.classList.add("loaded");
+          // Only show audio controls for _player videos
+          if (videoAttempt === 0) {
+            muteBtn.style.display = "";
+            volWrap.style.display = "";
+          }
+          loadNextProjectItem();
+        }, { once: true });
+
+        video.addEventListener("error", function () {
+          videoAttempt++;
+          if (videoAttempt === 1) {
+            // _player.mp4 not found — try plain .mp4 (no audio controls)
+            video.src = mp4;
+          } else {
+            fallbackToImages();
+          }
         });
 
-        video.src = mp4;
+        video.src = `${base}_player.mp4`;
 
-        // Mute button
+        // Mute button (hidden by default, shown only for _player videos)
         const muteBtn = document.createElement("button");
         muteBtn.className = "mute-btn";
         muteBtn.setAttribute("aria-label", "Unmute");
+        muteBtn.style.display = "none";
 
         const iconMuted = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>`;
         const iconSound = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`;
@@ -1086,9 +1105,10 @@
           muteBtn.setAttribute("aria-label", video.muted ? "Unmute" : "Mute");
         });
 
-        // Volume slider (left side)
+        // Volume slider (hidden by default, shown only for _player videos)
         const volWrap = document.createElement("div");
         volWrap.className = "volume-wrap";
+        volWrap.style.display = "none";
 
         const iconPlay  = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
         const iconPause = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
