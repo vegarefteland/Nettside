@@ -39,7 +39,9 @@
       "Bash(mv 03.png 02.png)",
       "Bash(mv 04.png 03.png)",
       "Bash(mv 05.png 04.png)",
-      "Bash(mv 06.png 05.png)"
+      "Bash(mv 06.png 05.png)",
+      "Bash(python3 /Users/vegarefteland/.claude/skills/ui-ux-pro-max/scripts/search.py \"portfolio minimal dark loading intro animation typewriter\" --design-system -p \"Vegar Efteland Portfolio\")",
+      "Bash(python3 /Users/vegarefteland/.claude/skills/ui-ux-pro-max/scripts/search.py \"loading screen intro reveal animation typewriter\" --domain ux -n 6)"
     ]
   }
 }

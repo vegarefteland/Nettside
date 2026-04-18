@@ -13,6 +13,28 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+  <!-- Critical: runs before first paint — theme + intro cover -->
+  <style>
+    html, body { background: #ffffff; }
+    html[data-theme="dark"],
+    html[data-theme="dark"] body { background: #0d0d0d; }
+    #intro { position: fixed; inset: 0; z-index: 99999; background: #ffffff; }
+    [data-theme="dark"] #intro { background: #0d0d0d; }
+    html.intro-done #intro { display: none !important; }
+  </style>
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem("theme");
+        var isDark = saved === "dark" || (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        if (isDark) document.documentElement.setAttribute("data-theme", "dark");
+      } catch (e) {}
+      try {
+        if (sessionStorage.getItem("introSeen")) document.documentElement.classList.add("intro-done");
+      } catch (e) {}
+    })();
+  </script>
+
   <style>
     /* ─── Reset ─────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -104,13 +126,15 @@
     .page.active { display: block; }
 
     @keyframes pageIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; transform: translateY(14px) scale(0.99); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
     }
 
     @media (prefers-reduced-motion: reduce) {
       .page, .project-card img, .archive-img img,
-      .project-arrow, .project-card::after, .skills-reel { transition: none !important; animation: none !important; }
+      .project-arrow, .project-card::after, .skills-reel,
+      #page-about .about-wrap > *,
+      .project-left .section-tag, .project-left .project-desc { transition: none !important; animation: none !important; }
     }
 
     /* ─── Top Nav ────────────────────────────────────────────── */
@@ -443,8 +467,35 @@
     .archive-img:hover img { transform: scale(1.04); }
 
     @keyframes archiveIn {
-      from { opacity: 0; transform: translateY(10px); }
+      from { opacity: 0; transform: translateY(24px) scale(0.95); filter: blur(4px); }
+      to   { opacity: 1; transform: translateY(0)    scale(1);    filter: blur(0px); }
+    }
+
+    /* ─── About page — staggered children ───────────────────────── */
+    @keyframes contentIn {
+      from { opacity: 0; transform: translateY(12px); }
       to   { opacity: 1; transform: translateY(0); }
+    }
+    #page-about .about-wrap > * {
+      animation: contentIn 400ms var(--ease-out) both;
+    }
+    #page-about .about-wrap > *:nth-child(1) { animation-delay: 40ms; }
+    #page-about .about-wrap > *:nth-child(2) { animation-delay: 100ms; }
+    #page-about .about-wrap > *:nth-child(3) { animation-delay: 160ms; }
+    #page-about .about-wrap > *:nth-child(4) { animation-delay: 210ms; }
+    #page-about .about-wrap > *:nth-child(5) { animation-delay: 255ms; }
+    #page-about .about-wrap > *:nth-child(6) { animation-delay: 295ms; }
+    #page-about .about-wrap > *:nth-child(7) { animation-delay: 330ms; }
+    #page-about .about-wrap > *:nth-child(8) { animation-delay: 358ms; }
+
+    /* ─── Project detail — left panel stagger ───────────────────── */
+    .project-left .section-tag {
+      animation: contentIn 380ms var(--ease-out) both;
+      animation-delay: 40ms;
+    }
+    .project-left .project-desc {
+      animation: contentIn 380ms var(--ease-out) both;
+      animation-delay: 110ms;
     }
 
 
@@ -700,17 +751,21 @@
     }
 
     /* ─── Stagger for project grid ───────────────────────────── */
-    .project-card { animation: cardIn 380ms var(--ease-out) both; }
-    .project-card:nth-child(1) { animation-delay: 0ms; }
-    .project-card:nth-child(2) { animation-delay: 40ms; }
-    .project-card:nth-child(3) { animation-delay: 80ms; }
-    .project-card:nth-child(4) { animation-delay: 120ms; }
-    .project-card:nth-child(5) { animation-delay: 160ms; }
-    .project-card:nth-child(6) { animation-delay: 200ms; }
+    .project-card { animation: cardIn 480ms var(--ease-out) both; }
+    .project-card:nth-child(1)  { animation-delay: 0ms; }
+    .project-card:nth-child(2)  { animation-delay: 65ms; }
+    .project-card:nth-child(3)  { animation-delay: 130ms; }
+    .project-card:nth-child(4)  { animation-delay: 195ms; }
+    .project-card:nth-child(5)  { animation-delay: 260ms; }
+    .project-card:nth-child(6)  { animation-delay: 325ms; }
+    .project-card:nth-child(7)  { animation-delay: 375ms; }
+    .project-card:nth-child(8)  { animation-delay: 415ms; }
+    .project-card:nth-child(9)  { animation-delay: 445ms; }
+    .project-card:nth-child(n+10) { animation-delay: 465ms; }
 
     @keyframes cardIn {
-      from { opacity: 0; transform: translateY(16px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; transform: translateY(22px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
     }
 
 
@@ -731,10 +786,94 @@
     }
 
 
+    /* ════════════════════════════════════════════════════════════════
+     * INTRO SEQUENCE
+     * ════════════════════════════════════════════════════════════════ */
+    #intro {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: all;
+      transition: opacity 320ms var(--ease-out);
+    }
+    #intro.intro-exit {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Pill — exact nav-pill spec */
+    #intro-group {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--nav-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(0, 0, 0, 0.07);
+      border-radius: 100px;
+      padding: 0 18px;
+      height: 36px;
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      white-space: nowrap;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(8px) scale(0.97);
+      transition: opacity 320ms var(--ease-out), transform 320ms var(--ease-out);
+    }
+    [data-theme="dark"] #intro-group {
+      border-color: rgba(255, 255, 255, 0.07);
+    }
+    #intro-group.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    #intro-group.intro-exit {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.97);
+    }
+
+    #intro-name {
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--fg);
+      font-family: var(--font);
+      white-space: nowrap;
+    }
+
+    #intro-cursor {
+      display: inline-block;
+      width: 1px;
+      height: 0.8em;
+      background: var(--muted);
+      margin-left: 1px;
+      vertical-align: middle;
+      animation: introBlink 0.8s ease infinite;
+    }
+    #intro-cursor.hidden { display: none; }
+
+    @keyframes introBlink {
+      0%, 40%  { opacity: 1; }
+      60%, 100% { opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #intro, #intro-group { transition: none !important; }
+    }
   </style>
 </head>
 
 <body>
+
+  <!-- ══ INTRO SEQUENCE ══════════════════════════════════════════ -->
+  <div id="intro" aria-hidden="true" role="presentation">
+    <div id="intro-group">
+      <div id="intro-name"><span id="intro-text"></span><span id="intro-cursor"></span></div>
+    </div>
+  </div>
 
   <!-- ══════════════════════════════════════════════════════════════
        HOME PAGE — Project grid
@@ -820,7 +959,7 @@
       <footer class="about-footer">
         <!-- ↓ Edit footer ↓ -->
         Copyright ©2026 Vegar Efteland Melhus, All rights reserved
-        <span style="margin-left: 16px; opacity: 0.4;">v1.1</span>
+        <span style="margin-left: 16px; opacity: 0.4;">v1.2</span>
       </footer>
 
     </div>
@@ -1490,13 +1629,6 @@
       localStorage.setItem("theme", next);
     }
 
-    (function initTheme() {
-      const saved = localStorage.getItem("theme");
-      const preferred = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-      const theme = saved || preferred;
-      if (theme === "dark") document.documentElement.setAttribute("data-theme", "dark");
-    })();
-
     /* ════════════════════════════════════════════════════════════════
      * INIT
      * ════════════════════════════════════════════════════════════════ */
@@ -1510,6 +1642,84 @@
 
     restoreFromPath();
     renderNav();
+
+    /* ════════════════════════════════════════════════════════════════
+     * INTRO SEQUENCE
+     * ════════════════════════════════════════════════════════════════ */
+    (function initIntro() {
+      const intro       = document.getElementById("intro");
+      const introGroup  = document.getElementById("intro-group");
+      const introText   = document.getElementById("intro-text");
+      const introCursor = document.getElementById("intro-cursor");
+
+      if (!intro) return;
+
+      // Skip after first view this session
+      if (sessionStorage.getItem("introSeen")) {
+        intro.style.display = "none";
+        return;
+      }
+
+      // Respect prefers-reduced-motion
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        intro.style.display = "none";
+        sessionStorage.setItem("introSeen", "1");
+        return;
+      }
+
+      const NAME       = "Vegar Efteland Melhus";
+      const CHAR_MS    = 55;
+      const GROUP_IN   = 80;
+      const TYPE_START = 380;
+      const HOLD_MS    = 480;
+
+      // Lock pill to its final width before typing so it never resizes
+      introText.textContent = NAME;
+      void introGroup.offsetWidth;
+      introGroup.style.minWidth = introGroup.offsetWidth + "px";
+      introText.textContent = "";
+
+      let charIndex = 0;
+
+      function typeNext() {
+        if (charIndex < NAME.length) {
+          introText.textContent += NAME[charIndex++];
+          setTimeout(typeNext, CHAR_MS);
+        } else {
+          setTimeout(exitIntro, HOLD_MS);
+        }
+      }
+
+      function restartCardAnimations() {
+        const cards = document.querySelectorAll(".project-card");
+        cards.forEach((card, i) => {
+          card.style.animation = "none";
+          void card.offsetWidth;
+          card.style.animation = "";
+          card.style.animationDelay = (i * 65) + "ms";
+        });
+      }
+
+      function exitIntro() {
+        introCursor.classList.add("hidden");
+        introGroup.classList.add("intro-exit");
+        setTimeout(() => {
+          // Reset cards NOW while intro still fully covers the page,
+          // so they animate in fresh as the overlay fades out
+          restartCardAnimations();
+          intro.classList.add("intro-exit");
+          setTimeout(() => {
+            intro.style.display = "none";
+            sessionStorage.setItem("introSeen", "1");
+            document.documentElement.classList.add("intro-done");
+          }, 340);
+        }, 200);
+      }
+
+      // Kick off
+      setTimeout(() => introGroup.classList.add("visible"), GROUP_IN);
+      setTimeout(typeNext, TYPE_START);
+    })();
 
   </script>
 
