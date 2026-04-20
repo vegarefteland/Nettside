@@ -31,8 +31,8 @@ const SITE = {
       cover: "images/projects/02/cover.webp",
       color: "#1C1C1E",
       description:
-        "Edit this description in content.js.\n\n" +
-        "Describe the project, your role, the brief, and what makes it interesting.",
+        "Content.js.\n\n" +
+        "Coming Soon",
     },
     {
       title: "Poster Design",
@@ -69,8 +69,8 @@ const SITE = {
       cover: "images/projects/06/cover.webp",
       color: "#F0EBE3",
       description:
-        "Edit this description in content.js.\n\n" +
-        "Describe the project, your role, the brief, and what makes it interesting.",
+        "content.js.\n\n" +
+        "Coming Soon",
     },
   ],
 
