@@ -14,6 +14,8 @@ const SITE = {
    * color:       background colour while the cover loads
    * layout:      "grid" for 2-column, omit for full-width stack
    * description: text on the project page — use \n\n for a new paragraph
+   * year:        optional — shown as a pill next to "Description"
+   *              (e.g. "2024", "2022–2026", "Ongoing"). Omit to hide.
    * ────────────────────────────────────────────────────────────── */
   projects: [
     {
@@ -21,6 +23,7 @@ const SITE = {
       folder: "01",
       cover: "images/projects/01/cover.webp",
       color: "#C8B8A2",
+      year: "2025–2026",
       description:
         "Ongoing personal project.\n\n" +
         "Designing retro inspired formula 1 merch for every team on the grid.",
@@ -30,9 +33,9 @@ const SITE = {
       folder: "02",
       cover: "images/projects/02/cover.webp",
       color: "#1C1C1E",
+      year: "2024-2025",
       description:
-        "Content.js.\n\n" +
-        "Coming Soon",
+        "Coming Soon.",
     },
     {
       title: "Poster Design",
@@ -40,6 +43,7 @@ const SITE = {
       cover: "images/projects/03/cover.webp",
       color: "#E8E0D5",
       layout: "grid",
+      year: "2023–2026",
       description:
         "Selected poster design projects.\n\n" +
         "School assignments and concept design work.",
@@ -49,6 +53,7 @@ const SITE = {
       folder: "04",
       cover: "images/projects/04/cover.webp",
       color: "#3D4A5C",
+      year: "2026",
       description:
         "Modular Desk Interface concept. Inspired by the design language of Braun and Teenage Engineering. " +
         "Built around physical buttons and knobs, materials include sandblasted steel with a matte finish.\n\n" +
@@ -59,6 +64,7 @@ const SITE = {
       folder: "05",
       cover: "images/projects/05/cover.webp",
       color: "#D4C5B0",
+      year: "2026",
       description:
         "Promotional showcase video highlighting motion and design work.\n\n" +
         "Created in After Effects and Premiere Pro.",
@@ -68,9 +74,9 @@ const SITE = {
       folder: "06",
       cover: "images/projects/06/cover.webp",
       color: "#F0EBE3",
+      year: "2025",
       description:
-        "content.js.\n\n" +
-        "Coming Soon",
+        "Coming Soon.",
     },
   ],
 

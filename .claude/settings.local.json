@@ -43,7 +43,9 @@
       "Bash(python3 /Users/vegarefteland/.claude/skills/ui-ux-pro-max/scripts/search.py \"portfolio minimal dark loading intro animation typewriter\" --design-system -p \"Vegar Efteland Portfolio\")",
       "Bash(python3 /Users/vegarefteland/.claude/skills/ui-ux-pro-max/scripts/search.py \"loading screen intro reveal animation typewriter\" --domain ux -n 6)",
       "Read(//Users/vegarefteland/.claude/skills/ui-ux-pro-max/**)",
-      "Bash(python3 scripts/search.py \"minimal portfolio coming soon maintenance page\" --design-system -f markdown)"
+      "Bash(python3 scripts/search.py \"minimal portfolio coming soon maintenance page\" --design-system -f markdown)",
+      "Bash(node -e \"const fs = require\\('fs'\\); const html = fs.readFileSync\\('/Users/vegarefteland/Desktop/nettside/index.html', 'utf8'\\); try { /* extract script content roughly */ const m = html.match\\(/<script>\\([\\\\s\\\\S]*?\\)<\\\\/script>\\\\s*<\\\\/body>/\\); if \\(!m\\) { console.log\\('no inline script'\\); process.exit\\(1\\); } new Function\\(m[1].replace\\(/SITE\\\\\\\\./g, '\\({projects:[],archive:[]}\\).'\\)\\); console.log\\('inline JS parses OK'\\); } catch \\(e\\) { console.error\\('PARSE ERROR:', e.message\\); process.exit\\(1\\); }\")",
+      "Bash(/usr/bin/python3 -c ' *)"
     ]
   }
 }
