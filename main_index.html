@@ -501,8 +501,9 @@
 
     .archive-img {
       position: absolute;
-      overflow: hidden;
-      border-radius: 6px;
+      /* overflow visible + no border-radius on the cell — the inner img/video carries
+         its own border-radius, and we want the hover shadow to render outside the cell
+         instead of being clipped against neighbouring cells. */
       opacity: 0; /* hidden until cascade-in class is added (see renderArchive) */
     }
     /* Position transitions only enabled after the initial shuffle settles —
@@ -511,13 +512,29 @@
       transition: top 450ms var(--ease-out), left 450ms var(--ease-out);
     }
 
-    .archive-img img {
+    .archive-img img,
+    .archive-img video {
       width: 100%;
       height: auto;
       display: block;
-      transition: transform 500ms var(--ease-out);
+      border-radius: 6px; /* matches cell — keeps rounded corners when scaled down */
+      transition: transform 500ms var(--ease-out),
+                  box-shadow 350ms var(--ease-out);
     }
-    .archive-img:hover img { transform: scale(1.04); }
+    /* Hover: shrink the media slightly inside the cell so no detail gets cropped. */
+    .archive-img:hover img,
+    .archive-img:hover video {
+      transform: scale(0.96);
+      /* Tight, soft shadow — total reach stays within the 4% scale-down inset +
+         6px masonry gap, so it never reaches a neighbour. */
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05),
+                  0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    [data-theme="dark"] .archive-img:hover img,
+    [data-theme="dark"] .archive-img:hover video {
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25),
+                  0 2px 8px rgba(0, 0, 0, 0.30);
+    }
 
     /* Cascade by column — once all images are loaded and laid out, each column
        streams in top-to-bottom, with later columns starting after earlier ones.
@@ -591,6 +608,7 @@
       pointer-events: all;
     }
     .lightbox img,
+    .lightbox video,
     #lightbox-color {
       max-width: min(90vw, 1000px);
       max-height: 88vh;
@@ -1084,6 +1102,7 @@
     </button>
     <div id="lightbox-wrap">
       <img id="lightbox-img" src="" alt="" style="display:none">
+      <video id="lightbox-video" src="" autoplay loop muted playsinline style="display:none"></video>
       <div id="lightbox-color" style="display:none; width:min(90vw,600px); height:min(90vw,600px); border-radius:6px;"></div>
     </div>
   </div>
@@ -1545,7 +1564,11 @@
 
       archiveCells.forEach(cell => {
         const img    = cell.querySelector("img");
-        const ratio  = img.naturalHeight / img.naturalWidth;
+        const vid    = !img && cell.querySelector("video");
+        const media  = img || vid;
+        const ratio  = vid
+          ? (media.videoHeight || 9) / (media.videoWidth || 16)
+          : media.naturalHeight / media.naturalWidth;
         const height = colW * ratio;
         const col    = colH.indexOf(Math.min(...colH));
         const top    = colH[col] + (colH[col] > 0 ? GAP : 0);
@@ -1625,6 +1648,7 @@
         const jpeg = `images/archive/${num}.jpeg`;
         const png  = `images/archive/${num}.png`;
         const gif  = `images/archive/${num}.gif`;
+        const mp4  = `images/archive/${num}.mp4`;
 
         const img = new Image();
         img.alt = "";
@@ -1650,10 +1674,42 @@
           else if (img.src.endsWith(".jpg"))   img.src = jpeg;
           else if (img.src.endsWith(".jpeg"))  img.src = png;
           else if (img.src.endsWith(".png"))   img.src = gif;
+          else if (img.src.endsWith(".gif"))   tryArchiveVideo(mp4);
           else { archMisses++; loadNextArchiveItem(); }
         };
 
         img.src = webp;
+
+        function tryArchiveVideo(src) {
+          const video = document.createElement("video");
+          video.autoplay    = true;
+          video.loop        = true;
+          video.muted       = true;
+          video.playsInline = true;
+          video.setAttribute("aria-hidden", "true");
+          video.style.cssText = "width:100%;height:auto;display:block;";
+
+          video.onloadedmetadata = () => {
+            if (gen !== archiveGen) return; // stale
+            archMisses = 0;
+            const cell = document.createElement("div");
+            cell.className = "archive-img";
+            cell.appendChild(video);
+            cell.addEventListener("click", () => openLightbox(video.src, "#1a1a1a"));
+            archiveCells.push(cell);
+            grid.appendChild(cell);
+            masonryLayout();
+            loadNextArchiveItem();
+          };
+
+          video.onerror = () => {
+            if (gen !== archiveGen) return; // stale
+            archMisses++;
+            loadNextArchiveItem();
+          };
+
+          video.src = src;
+        }
       }
 
       loadNextArchiveItem();
@@ -1676,22 +1732,23 @@
     const lightboxWrap  = document.getElementById("lightbox-wrap");
     const lightboxPrev  = document.getElementById("lightbox-prev");
     const lightboxNext  = document.getElementById("lightbox-next");
+    const lightboxVideo = document.getElementById("lightbox-video");
 
     let lbGallery      = [];
     let lbIndex        = 0;
     let lbLoadingActive = false; // true while project images are still loading in
 
     function buildGallery() {
-      // Collect all loaded clickable images on the current page
-      const sel = '.archive-img img, .project-hero img, .project-img-item img';
-      const imgs = Array.from(document.querySelectorAll(sel))
-        .filter(img => img.naturalWidth > 0);
+      // Collect all loaded clickable media (images + videos) on the current page
+      const sel = '.archive-img img, .archive-img video, .project-hero img, .project-img-item img';
+      const items = Array.from(document.querySelectorAll(sel))
+        .filter(el => el.tagName === "VIDEO" ? el.videoWidth > 0 : el.naturalWidth > 0);
 
       // Archive uses a shuffled masonry layout — DOM order (file numbers)
       // doesn't match what's on screen. Sort by visual position so the
       // lightbox arrows step through reading order (top → bottom, left → right).
-      if (imgs.some(i => i.closest('.archive-img'))) {
-        imgs.sort((a, b) => {
+      if (items.some(el => el.closest('.archive-img'))) {
+        items.sort((a, b) => {
           const ar = a.getBoundingClientRect();
           const br = b.getBoundingClientRect();
           // Group into rough rows so left-ordering wins within a row
@@ -1700,7 +1757,11 @@
         });
       }
 
-      return imgs.map(img => ({ src: img.src, color: "#d4d4d4" }));
+      return items.map(el => ({
+        src:   el.src,
+        color: "#d4d4d4",
+        type:  el.tagName === "VIDEO" ? "video" : "image",
+      }));
     }
 
     function showColor(color) {
@@ -1714,12 +1775,19 @@
 
       lightboxColor.style.display = "none";
       lightboxImg.style.display   = "none";
+      lightboxVideo.style.display = "none";
+      lightboxVideo.pause();
+      lightboxVideo.src = "";
 
       lightboxWrap.style.animation = "none";
       void lightboxWrap.offsetWidth;
       lightboxWrap.style.animation = "";
 
-      if (item && item.src) {
+      if (item && item.src && item.type === "video") {
+        lightboxVideo.src = item.src;
+        lightboxVideo.style.display = "block";
+        lightboxVideo.play().catch(() => {});
+      } else if (item && item.src) {
         lightboxImg.src = "";
         lightboxImg.onerror = () => showColor(item.color);
         lightboxImg.onload  = () => { lightboxImg.style.display = "block"; };
@@ -1753,6 +1821,8 @@
     function closeLightbox() {
       lightbox.classList.remove("open");
       document.body.style.overflow = "";
+      lightboxVideo.pause();
+      lightboxVideo.src = "";
       // Restore focus to whatever opened the lightbox
       if (lbReturnFocus && typeof lbReturnFocus.focus === "function") {
         lbReturnFocus.focus({ preventScroll: true });
