@@ -736,6 +736,7 @@
       display: flex;
       flex-direction: column;
       gap: var(--gap);
+      padding-right: 80px;
     }
 
     .project-hero {
@@ -762,6 +763,15 @@
     .project-img-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
+      gap: var(--gap);
+      align-items: start;
+    }
+
+    /* Subfolder inline grid row — auto-fits however many images are in the folder
+       (1 image = full width, 2 = side by side, 3 = three columns, etc.) */
+    .project-row-grid {
+      display: grid;
+      grid-template-columns: repeat(var(--row-cols, 2), 1fr);
       gap: var(--gap);
       align-items: start;
     }
@@ -851,11 +861,143 @@
       cursor: pointer;
     }
 
+    /* ─── Focus mode ─────────────────────────────────────────── */
+
+    /* Icon-only pill button — sits in the tags row alongside Description/Year */
+    .focus-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--tag-bg);
+      color: var(--tag-fg);
+      border: 1px solid var(--tag-border);
+      border-radius: 100px;
+      padding: 4px 9px;
+      overflow: hidden; /* clips the sweep to the pill shape */
+      cursor: pointer;
+      opacity: 0;
+      animation: contentIn 380ms var(--ease-out) both;
+      animation-delay: 120ms;
+      transition: opacity 180ms ease;
+    }
+    .focus-btn:hover { opacity: 0.7; }
+    .focus-btn svg { width: 11px; height: 11px; display: block; }
+    @media (max-width: 860px) { .focus-btn { display: none; } }
+
+    /* Light sweep — a diagonal highlight that runs across every 6s */
+    .focus-btn::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        105deg,
+        transparent 20%,
+        rgba(255, 255, 255, 0.22) 50%,
+        transparent 80%
+      );
+      transform: translateX(-150%);
+      animation: focusSweep 6s linear infinite;
+      pointer-events: none;
+      border-radius: inherit;
+    }
+    @keyframes focusSweep {
+      0%   { transform: translateX(-150%); }
+      12%  { transform: translateX(150%); }
+      100% { transform: translateX(150%); }
+    }
+
+    .focus-mode {
+      position: fixed;
+      inset: 0;
+      z-index: 9998;
+      background: #000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 400ms ease;
+    }
+    .focus-mode.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .focus-close {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 9999;
+      width: 36px;
+      height: 36px;
+      border-radius: 100px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      color: rgba(255,255,255,0.7);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 300ms ease, color 180ms ease;
+      pointer-events: none;
+    }
+    .focus-mode.open .focus-close { opacity: 1; pointer-events: all; }
+    .focus-close:hover { color: #fff; }
+    .focus-close svg { width: 14px; height: 14px; }
+
+    /* Scrollable column — same gap and feel as the project right column */
+    .focus-scroll {
+      height: 100vh;
+      overflow-y: scroll;
+      scrollbar-width: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--gap);
+      padding: 72px 40px 60px;
+      box-sizing: border-box;
+    }
+    .focus-scroll::-webkit-scrollbar { display: none; }
+
+    .focus-item {
+      width: min(900px, 100%);
+      position: relative;
+    }
+
+    .focus-item img,
+    .focus-item video {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 6px;
+      user-select: none;
+    }
+
+    /* Grid rows inside focus mode — reproduces project-img-grid / project-row-grid */
+    .focus-grid-row {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(var(--fcols, 2), 1fr);
+      gap: var(--gap);
+    }
+    .focus-grid-row img,
+    .focus-grid-row video {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 6px;
+      user-select: none;
+    }
+
     @media (max-width: 860px) {
       .project-layout {
         grid-template-columns: 1fr;
       }
       .project-left { position: static; }
+      .project-right { padding-right: 0; }
     }
 
     /* ─── Stagger for project grid ───────────────────────────── */
@@ -1089,6 +1231,14 @@
        ══════════════════════════════════════════════════════════════ -->
   <div id="page-project" class="page" aria-label="Project"></div>
 
+  <!-- Focus mode -->
+  <div class="focus-mode" id="focus-mode" role="dialog" aria-modal="true" aria-label="Focus view">
+    <button class="focus-close" id="focus-close" aria-label="Exit focus">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="focus-scroll" id="focus-scroll"></div>
+  </div>
+
   <!-- Lightbox -->
   <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
     <button class="lightbox-close" id="lightbox-close" aria-label="Close">
@@ -1243,6 +1393,9 @@
             <div class="section-tags-row">
               <span class="section-tag">Description</span>
               ${yearPill}
+              <button class="focus-btn" id="focus-btn" aria-label="Enter focus view">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+              </button>
             </div>
             <div class="project-desc">${paragraphs}</div>
           </div>
@@ -1279,6 +1432,20 @@
         const png  = `${base}.png`;
         const gif  = `${base}.gif`;
 
+        // Probe for a subfolder grid row (e.g. images/projects/01/02/01.webp).
+        // If found → loadSubfolderRow handles it; otherwise → loadNormalItem.
+        const subFormats = [".webp", ".jpg", ".jpeg", ".png", ".gif"];
+        let subFmt = 0;
+        const probe = new Image();
+        probe.onload = () => { projMisses = 0; loadSubfolderRow(base, probe); };
+        probe.onerror = () => {
+          subFmt++;
+          if (subFmt < subFormats.length) probe.src = `${base}/01${subFormats[subFmt]}`;
+          else loadNormalItem();
+        };
+        probe.src = `${base}/01${subFormats[0]}`;
+
+        function loadNormalItem() {
         const target = project.layout === "grid" ? container : right;
 
         const item = document.createElement("div");
@@ -1437,6 +1604,54 @@
         wrap.appendChild(muteBtn);
         item.appendChild(wrap);
         target.appendChild(item);
+        } // end loadNormalItem
+      }
+
+      // Loads all images from a subfolder (e.g. 02/01.webp, 02/02.webp …)
+      // and renders them as an inline grid row in the project right column.
+      function loadSubfolderRow(rowBase, firstImg) {
+        const rowGrid = document.createElement("div");
+        rowGrid.className = "project-row-grid";
+        right.appendChild(rowGrid);
+
+        let subIdx = 1; // firstImg is already loaded (01.*); start probing from 02
+
+        function addSubItem(img) {
+          const item = document.createElement("div");
+          item.className = "project-img-item";
+          img.alt = "";
+          img.loading = "eager";
+          img.decoding = "async";
+          item.appendChild(img);
+          item.classList.add("loaded");
+          item.addEventListener("click", () => openLightbox(img.src, "#d4d4d4"));
+          rowGrid.appendChild(item);
+          // Update column count so CSS grid reflects the actual number of items
+          rowGrid.style.setProperty("--row-cols", rowGrid.children.length);
+        }
+
+        function loadNextSubItem() {
+          subIdx++;
+          const subNum = String(subIdx).padStart(2, "0");
+          const subBase = `${rowBase}/${subNum}`;
+          const sFormats = [".webp", ".jpg", ".jpeg", ".png", ".gif"];
+          let sFmt = 0;
+          const img = new Image();
+          img.onload = () => { addSubItem(img); loadNextSubItem(); };
+          img.onerror = () => {
+            sFmt++;
+            if (sFmt < sFormats.length) img.src = `${subBase}${sFormats[sFmt]}`;
+            else {
+              // No more sub-images — row is complete, move to next project item
+              if (rowGrid.children.length === 0) rowGrid.remove();
+              loadNextProjectItem();
+            }
+          };
+          img.src = `${subBase}${sFormats[0]}`;
+        }
+
+        addSubItem(firstImg); // add the probe image (already loaded)
+        loadNextSubItem();    // probe for the next sub-image
       }
 
       loadNextProjectItem();
@@ -1911,6 +2126,109 @@
       document.documentElement.setAttribute("data-theme", next);
       localStorage.setItem("theme", next);
     }
+
+    /* ════════════════════════════════════════════════════════════════
+     * FOCUS MODE
+     * ════════════════════════════════════════════════════════════════ */
+    const focusOverlay = document.getElementById("focus-mode");
+    const focusScroll  = document.getElementById("focus-scroll");
+    const focusCloseBtn = document.getElementById("focus-close");
+
+    function openFocusMode() {
+      focusScroll.innerHTML = "";
+
+      const right = document.getElementById("project-right");
+      if (!right || !right.children.length) return;
+
+      // Helper: clone a single media element for focus view
+      function cloneMedia(el) {
+        if (el.tagName === "IMG") {
+          const img = document.createElement("img");
+          img.src = el.src;
+          img.alt = el.alt || "";
+          img.draggable = false;
+          return img;
+        } else {
+          const vid = document.createElement("video");
+          vid.src = el.src;
+          vid.autoplay = true;
+          vid.loop = true;
+          vid.muted = true;
+          vid.playsInline = true;
+          return vid;
+        }
+      }
+
+      // Walk direct children of project-right and reproduce their layout
+      Array.from(right.children).forEach(child => {
+        const isGrid = child.classList.contains("project-img-grid") ||
+                       child.classList.contains("project-row-grid");
+
+        const item = document.createElement("div");
+        item.className = "focus-item";
+
+        if (isGrid) {
+          // Reproduce the grid — 2 cols for project-img-grid, item-count cols for row-grids
+          const mediaEls = Array.from(child.querySelectorAll("img, video"));
+          if (!mediaEls.length) return;
+
+          const cols = child.classList.contains("project-row-grid")
+            ? mediaEls.length
+            : 2;
+
+          const grid = document.createElement("div");
+          grid.className = "focus-grid-row";
+          grid.style.setProperty("--fcols", cols);
+          mediaEls.forEach(el => grid.appendChild(cloneMedia(el)));
+          item.appendChild(grid);
+
+        } else {
+          // Single hero image or video
+          const el = child.querySelector("img, video");
+          if (!el) return;
+
+          item.appendChild(cloneMedia(el));
+        }
+
+        focusScroll.appendChild(item);
+      });
+
+      if (!focusScroll.children.length) return;
+
+      focusOverlay.classList.add("open");
+      document.body.style.overflow = "hidden";
+      focusCloseBtn.focus({ preventScroll: true });
+    }
+
+    function closeFocusMode() {
+      focusOverlay.classList.remove("open");
+      document.body.style.overflow = "";
+      // Pause any videos to stop buffering
+      focusScroll.querySelectorAll("video").forEach(v => v.pause());
+      const btn = document.getElementById("focus-btn");
+      if (btn) btn.focus({ preventScroll: true });
+    }
+
+    // Wire up the close button
+    focusCloseBtn.addEventListener("click", closeFocusMode);
+    focusOverlay.addEventListener("click", e => {
+      if (e.target === focusOverlay) closeFocusMode();
+    });
+    focusScroll.addEventListener("click", e => {
+      if (!e.target.closest(".focus-item")) closeFocusMode();
+    });
+
+    // Wire up the Focus button (re-queried on each project load via delegation)
+    document.addEventListener("click", e => {
+      if (e.target.closest("#focus-btn")) openFocusMode();
+    });
+
+    // ESC to close
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape" && focusOverlay.classList.contains("open")) {
+        closeFocusMode();
+      }
+    });
 
     /* ════════════════════════════════════════════════════════════════
      * INIT

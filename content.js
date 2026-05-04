@@ -33,9 +33,10 @@ const SITE = {
       folder: "02",
       cover: "images/projects/02/cover.webp",
       color: "#1C1C1E",
-      year: "2024-2025",
+      year: "2024-2026",
       description:
-        "Coming Soon.",
+        "Ongoing personal project.\n\n" +
+        "Designing merch for every track on the calendar.",
     },
     {
       title: "Poster Design",
