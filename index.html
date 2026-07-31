@@ -14,8 +14,10 @@
   <meta property="og:title"       content="Vegar Efteland Melhus">
   <meta property="og:image"       content="https://vegarem.no/images/projects/01/cover.webp">
   <link rel="icon" href="images/favicon.png" type="image/png">
+  <!-- Which files exist + their dimensions. Fetched first so pages can render
+       without guessing. Regenerated on every commit by scripts/build-manifest.js -->
+  <link rel="preload" as="fetch" href="images/manifest.json" crossorigin>
   <link rel="preload" as="image" href="images/projects/01/cover.webp" fetchpriority="high">
-  <link rel="preload" as="image" href="images/projects/02/cover.webp" fetchpriority="high">
   <link rel="preload" as="image" href="images/projects/03/cover.webp" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -97,6 +99,12 @@
         if (sessionStorage.getItem("introSeen")) document.documentElement.classList.add("intro-done");
       } catch (e) {}
     })();
+
+    // Start fetching the image manifest immediately, in parallel with
+    // everything else, so it's ready by the time the page renders.
+    window.__manifest = fetch("images/manifest.json")
+      .then(r => r.ok ? r.json() : null)
+      .catch(() => null);
   </script>
 
   <style>
@@ -1065,11 +1073,7 @@
       to   { opacity: 1; transform: translateY(0)    scale(1);    filter: blur(0px); }
     }
 
-    /* Project image reveal — slow, smooth rise */
-    @keyframes projectReveal {
-      from { opacity: 0; transform: translateY(40px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
+    /* (projectReveal is defined once, further down with the project styles) */
 
     /* ─── About page — staggered children ───────────────────────── */
     @keyframes contentIn {
@@ -1981,7 +1985,7 @@
             </div>
             <div class="info-section">
               <p class="info-label">Last Updated</p>
-              <p class="info-text"><!--LAST_UPDATED-->Jul 17. 2026<!--/LAST_UPDATED--></p>
+              <p class="info-text"><!--LAST_UPDATED-->Jul 31. 2026<!--/LAST_UPDATED--></p>
             </div>
             <p class="info-version">v2.2</p>
           </div>
@@ -2134,6 +2138,10 @@
     let currentPage    = "home";
     let currentProject = null;
     let projRevealObs  = null;   // IntersectionObserver for project image reveal
+    // images/manifest.json — the list of which image files exist and their
+    // sizes. Set during INIT. If it's null (missing/failed), every loader
+    // falls back to probing the server, so the site still works.
+    let SITE_MANIFEST  = null;
 
     function showPage(pageId) {
       const old = document.getElementById("page-" + currentPage);
@@ -2395,6 +2403,199 @@
       function clearSkeleton() {
         if (pendingSkeleton) { pendingSkeleton.remove(); pendingSkeleton = null; }
       }
+
+      /* ════════════════════════════════════════════════════════════════
+       * FAST PATH — render straight from images/manifest.json
+       *
+       * The manifest lists exactly which files exist and how big they are,
+       * so we can (a) skip all the guess-and-404 probing and (b) reserve the
+       * exact right space for every image before it loads, which is what
+       * stops the page jumping around while it fills in.
+       * Falls back to the old probing loader below if the manifest is
+       * missing or doesn't know this project.
+       * ══════════════════════════════════════════════════════════════ */
+
+      // Videos below the fold get their src attached only as you approach,
+      // so a project full of clips doesn't fight for bandwidth up front.
+      const videoHydrator = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (!e.isIntersecting) return;
+          const v = e.target;
+          videoHydrator.unobserve(v);
+          if (v.dataset.src) { v.src = v.dataset.src; delete v.dataset.src; }
+        });
+      }, { rootMargin: "1200px 0px" });
+
+      function setBox(el, w, h) {
+        if (!w || !h) return;
+        el.setAttribute("width", w);
+        el.setAttribute("height", h);
+        el.style.aspectRatio = w + " / " + h;
+      }
+
+      function mfImage(entry, eager) {
+        const img = document.createElement("img");
+        img.alt = "";
+        img.decoding = "async";
+        setBox(img, entry.w, entry.h);
+        if (eager) { img.loading = "eager"; img.setAttribute("fetchpriority", "high"); }
+        else img.loading = "lazy";
+        img.src = entry.src;
+        return img;
+      }
+
+      function mfVideo(entry, eager) {
+        const video = document.createElement("video");
+        video.autoplay = true;
+        video.muted = true;
+        video.loop = true;
+        video.setAttribute("playsinline", "");
+        setBox(video, entry.w, entry.h);
+        if (eager) {
+          video.setAttribute("preload", "metadata");
+          video.src = entry.src;
+        } else {
+          video.setAttribute("preload", "none");
+          video.dataset.src = entry.src;
+          videoHydrator.observe(video);
+        }
+        return video;
+      }
+
+      // Full audio controls, used only for *_player.mp4 (entry.sound)
+      function mfVideoControls(video, wrap) {
+        const iconMuted = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>`;
+        const iconSound = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`;
+        const iconPlay  = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+        const iconPause = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
+
+        const muteBtn = document.createElement("button");
+        muteBtn.className = "mute-btn";
+        muteBtn.setAttribute("aria-label", "Unmute");
+        muteBtn.innerHTML = iconMuted + "Sound";
+
+        const volWrap = document.createElement("div");
+        volWrap.className = "volume-wrap";
+
+        const playBtn = document.createElement("button");
+        playBtn.className = "mute-btn";
+        playBtn.style.cssText = "position:static;background:none;padding:0;backdrop-filter:none;";
+        playBtn.innerHTML = iconPause;
+        playBtn.setAttribute("aria-label", "Pause");
+        playBtn.addEventListener("click", () => {
+          if (video.paused) { video.play(); playBtn.innerHTML = iconPause; playBtn.setAttribute("aria-label", "Pause"); }
+          else { video.pause(); playBtn.innerHTML = iconPlay; playBtn.setAttribute("aria-label", "Play"); }
+        });
+        volWrap.appendChild(playBtn);
+
+        const volIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        volIcon.setAttribute("viewBox", "0 0 24 24");
+        volIcon.setAttribute("fill", "none");
+        volIcon.setAttribute("stroke", "currentColor");
+        volIcon.setAttribute("stroke-width", "2");
+        volIcon.setAttribute("stroke-linecap", "round");
+        volIcon.setAttribute("stroke-linejoin", "round");
+        volIcon.innerHTML = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>`;
+        volWrap.appendChild(volIcon);
+
+        const slider = document.createElement("input");
+        slider.type = "range";
+        slider.className = "volume-slider";
+        slider.min = 0; slider.max = 1; slider.step = 0.01; slider.value = 0;
+        slider.setAttribute("aria-label", "Volume");
+        slider.addEventListener("input", () => {
+          const v = parseFloat(slider.value);
+          video.volume = v;
+          video.muted = v === 0;
+          muteBtn.innerHTML = video.muted ? iconMuted + "Sound" : iconSound + "Mute";
+          muteBtn.setAttribute("aria-label", video.muted ? "Unmute" : "Mute");
+        });
+        volWrap.appendChild(slider);
+
+        muteBtn.addEventListener("click", () => {
+          video.muted = !video.muted;
+          muteBtn.innerHTML = video.muted ? iconMuted + "Sound" : iconSound + "Mute";
+          muteBtn.setAttribute("aria-label", video.muted ? "Unmute" : "Mute");
+          slider.value = video.muted ? 0 : 1;
+        });
+
+        wrap.appendChild(volWrap);
+        wrap.appendChild(muteBtn);
+      }
+
+      function renderFromManifest(entry) {
+        let mediaCount = 0;   // drives eager-vs-lazy
+
+        // One rendered media item (image or video) inside `parent`
+        function addItem(node, parent, itemClass) {
+          const item = document.createElement("div");
+          item.className = itemClass;
+          const eager = mediaCount < 2;
+
+          if (node.type === "video") {
+            const wrap = document.createElement("div");
+            wrap.className = "video-wrap";
+            const v = mfVideo(node, eager);
+            wrap.appendChild(v);
+            if (node.sound) mfVideoControls(v, wrap);
+            item.appendChild(wrap);
+          } else {
+            const img = mfImage(node, eager);
+            item.appendChild(img);
+            item.addEventListener("click", () => openLightbox(img.currentSrc || img.src, "#d4d4d4"));
+          }
+
+          item.classList.add("loaded");
+          item.dataset.revealIdx = revealIndex++;
+          parent.appendChild(item);
+          if (projRevealObs) projRevealObs.observe(item);
+          mediaCount++;
+          return item;
+        }
+
+        // Side-by-side row — column widths come straight from the manifest,
+        // so the row is correctly proportioned before anything downloads.
+        function addRow(rowEntry, parent) {
+          const rowGrid = document.createElement("div");
+          rowGrid.className = "project-row-grid";
+          const ratios = rowEntry.items.map(s => (s.w && s.h) ? (s.w / s.h) : 1);
+          rowGrid.style.gridTemplateColumns = ratios.map(r => r + "fr").join(" ");
+          parent.appendChild(rowGrid);
+          rowEntry.items.forEach(s => addItem({ ...s, type: "image" }, rowGrid, "project-img-item"));
+          return rowGrid;
+        }
+
+        function walk(list, parent, itemClass) {
+          list.forEach(node => {
+            if (node.type === "group") {
+              const g = document.createElement("div");
+              g.className = "project-flush-group";
+              parent.appendChild(g);
+              walk(node.items, g, "project-img-item");
+            } else if (node.type === "row") {
+              addRow(node, parent);
+            } else {
+              addItem(node, parent, itemClass);
+            }
+          });
+        }
+
+        const target = project.layout === "grid" ? container : right;
+        walk(entry.items, target, project.layout === "grid" ? "project-img-item" : "project-hero");
+
+        // Height is already correct, so these can appear right away
+        lbLoadingActive = false;
+        initBackToTop();
+        renderViewNext(project);
+      }
+
+      const mfEntry = SITE_MANIFEST && SITE_MANIFEST.projects && SITE_MANIFEST.projects[project.folder];
+      if (mfEntry && mfEntry.items && mfEntry.items.length) {
+        renderFromManifest(mfEntry);
+        return;
+      }
+
+      /* ── SLOW PATH (fallback) — probe the server for each file ──────── */
 
       let projIndex = 1;
       let projMisses = 0;
@@ -3132,9 +3333,76 @@
       if (grid) grid.classList.remove("layout-settled");
       const gen = ++archiveGen;
 
-      // Shuffle numbers 1–50 upfront — no discovery delay
+      function settle() {
+        lbLoadingActive = false;
+        setTimeout(() => {
+          if (gen !== archiveGen) return;
+          if (!grid) return;
+          grid.classList.add("layout-settled");
+          startArchiveWiggle();
+          const shuffleWrap = document.querySelector(".archive-shuffle-wrap");
+          if (shuffleWrap) requestAnimationFrame(() => shuffleWrap.classList.add("visible"));
+        }, 600);
+      }
+
+      /* ── FAST PATH — the manifest already lists every archive file, so
+         there's nothing to discover. Load several at once instead of
+         strictly one-after-another. ─────────────────────────────────── */
+      const mfArchive = SITE_MANIFEST && SITE_MANIFEST.archive;
+      if (mfArchive && mfArchive.length) {
+        const list = mfArchive.slice();
+        for (let i = list.length - 1; i > 0; i--) {          // shuffle
+          const j = Math.floor(Math.random() * (i + 1));
+          [list[i], list[j]] = [list[j], list[i]];
+        }
+
+        let started = 0, finished = 0;
+        const CONCURRENCY = 6;
+
+        function place(node, entry, isVideo) {
+          if (gen !== archiveGen) return;
+          const cell = document.createElement("div");
+          cell.className = "archive-img";
+          cell.appendChild(node);
+          cell.addEventListener("click", () => openLightbox(entry.src, isVideo ? "#1a1a1a" : "#d4d4d4"));
+          archiveCells.push(cell);
+          grid.appendChild(cell);
+          scheduleMasonry();
+          if (/\/06\.[a-z0-9]+$/i.test(entry.src) && !isVideo) { cell.classList.add("cd-spin"); initCdSpin(cell, node); }
+          cell.classList.add("cascade-in");
+        }
+
+        function pump() {
+          while (started < list.length && (started - finished) < CONCURRENCY) {
+            const entry = list[started++];
+            const done = () => { finished++; if (finished >= list.length) settle(); else pump(); };
+
+            if (entry.type === "video") {
+              const v = document.createElement("video");
+              v.autoplay = true; v.loop = true; v.muted = true; v.playsInline = true;
+              v.setAttribute("aria-hidden", "true");
+              v.style.cssText = "width:100%;height:auto;display:block;";
+              if (entry.w && entry.h) { v.width = entry.w; v.height = entry.h; }
+              v.onloadedmetadata = () => { place(v, entry, true); done(); };
+              v.onerror = done;
+              v.src = entry.src;
+            } else {
+              const img = new Image();
+              img.alt = ""; img.setAttribute("aria-hidden", "true"); img.decoding = "async";
+              if (entry.w && entry.h) { img.width = entry.w; img.height = entry.h; }
+              img.onload  = () => { place(img, entry, false); done(); };
+              img.onerror = done;
+              img.src = entry.src;
+            }
+          }
+        }
+        pump();
+        return;
+      }
+
+      /* ── SLOW PATH (fallback) — guess numbers and see what exists ──── */
       const order = [];
-      for (let i = 1; i <= 50; i++) order.push(i);
+      for (let i = 1; i <= 80; i++) order.push(i);
       for (let i = order.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [order[i], order[j]] = [order[j], order[i]];
@@ -3240,6 +3508,27 @@
     function preloadArchiveImages() {
       if (archivePreloaded) return;
       archivePreloaded = true;
+
+      // Fast path: the manifest already knows every file — warm them a few at
+      // a time, low priority, so it never competes with what's on screen.
+      const mfArchive = SITE_MANIFEST && SITE_MANIFEST.archive;
+      if (mfArchive && mfArchive.length) {
+        let n = 0;
+        const CONCURRENCY = 3;
+        const step = () => {
+          if (n >= mfArchive.length) return;
+          const entry = mfArchive[n++];
+          if (entry.type === "video") { step(); return; }   // don't prefetch video bytes
+          const img = new Image();
+          img.decoding = "async";
+          if ("fetchPriority" in img) img.fetchPriority = "low";
+          img.onload = img.onerror = step;
+          img.src = entry.src;
+        };
+        for (let c = 0; c < CONCURRENCY; c++) step();
+        return;
+      }
+
       let i = 1;
       let misses = 0;
       const MAX_MISSES = 1;
@@ -3266,94 +3555,6 @@
       }
 
       next();
-    }
-
-    // Preload all project images in the background so project pages feel instant.
-    // Runs after the home page is settled — images load sequentially to avoid
-    // flooding the network. Videos are fetched as well (range request warms cache).
-    let projectsPreloaded = false;
-    function preloadProjectImages() {
-      if (projectsPreloaded) return;
-      projectsPreloaded = true;
-
-      const formats = [".webp", ".jpg", ".jpeg", ".png", ".gif"];
-      let pIdx = 0;
-
-      function nextProject() {
-        if (pIdx >= SITE.projects.length) return;
-        const project = SITE.projects[pIdx++];
-        if (project.wip) { nextProject(); return; }
-        let i = 1, misses = 0;
-
-        function nextItem() {
-          if (misses >= 1) { nextProject(); return; }
-          const num = String(i++).padStart(2, "0");
-          const base = `images/projects/${project.folder}/${num}`;
-
-          // Try subfolder first (e.g. 02/01.webp)
-          let subFmt = 0;
-          const sub = new Image();
-          sub.onload = () => { misses = 0; preloadSubfolder(base, () => nextItem()); };
-          sub.onerror = () => {
-            subFmt++;
-            if (subFmt < formats.length) { sub.src = `${base}/01${formats[subFmt]}`; }
-            else { tryNormal(); }
-          };
-          sub.src = `${base}/01${formats[0]}`;
-
-          function tryNormal() {
-            // Try video first
-            const vid = document.createElement("video");
-            vid.preload = "metadata";
-            vid.onloadedmetadata = () => { misses = 0; nextItem(); };
-            vid.onerror = tryImage;
-            vid.src = `${base}_player.mp4`;
-
-            function tryImage() {
-              vid.onerror = null;
-              // Try plain .mp4
-              const vid2 = document.createElement("video");
-              vid2.preload = "metadata";
-              vid2.onloadedmetadata = () => { misses = 0; nextItem(); };
-              vid2.onerror = tryImageFormats;
-              vid2.src = `${base}.mp4`;
-
-              function tryImageFormats() {
-                let fmt = 0;
-                const img = new Image();
-                img.onload = () => { misses = 0; nextItem(); };
-                img.onerror = () => {
-                  fmt++;
-                  if (fmt < formats.length) img.src = `${base}${formats[fmt]}`;
-                  else { misses++; nextItem(); }
-                };
-                img.src = `${base}${formats[0]}`;
-              }
-            }
-          }
-        }
-
-        function preloadSubfolder(rowBase, done) {
-          let si = 2, sFmt = 0;
-          function nextSub() {
-            const sNum = String(si++).padStart(2, "0");
-            sFmt = 0;
-            const img = new Image();
-            img.onload = () => nextSub();
-            img.onerror = () => {
-              sFmt++;
-              if (sFmt < formats.length) img.src = `${rowBase}/${sNum}${formats[sFmt]}`;
-              else done();
-            };
-            img.src = `${rowBase}/${sNum}${formats[0]}`;
-          }
-          nextSub();
-        }
-
-        nextItem();
-      }
-
-      nextProject();
     }
 
     let masonryRaf = null;
@@ -3941,16 +4142,19 @@
       history.replaceState(null, "", "/" + redirectPath);
     }
 
-    restoreFromPath();
-    renderNav();
+    // The manifest fetch was kicked off in <head>; wait for it so the first
+    // page render can use it. It's ~9KB and loads alongside the CSS/fonts,
+    // so in practice it's already done by the time we get here.
+    (window.__manifest || Promise.resolve(null)).then(m => {
+      SITE_MANIFEST = m;
+      restoreFromPath();
+      renderNav();
 
-    // Warm archive image cache in the background (skip if already on archive)
-    if (currentPage !== "archive") {
-      setTimeout(preloadArchiveImages, 1200);
-    }
-
-    // Preload project images after the home page settles
-    setTimeout(preloadProjectImages, 2500);
+      // Warm the archive cache in the background (skip if already on archive)
+      if (currentPage !== "archive") {
+        setTimeout(preloadArchiveImages, 1200);
+      }
+    });
 
     /* ════════════════════════════════════════════════════════════════
      * INTRO SEQUENCE
