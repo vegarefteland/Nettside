@@ -46,10 +46,31 @@
     html[data-theme="dark"] body { background: #0d0d0d; }
     html[data-theme="custom"],
     html[data-theme="custom"] body { background: var(--bg, #ffffff); }
-    #intro { position: fixed; inset: 0; z-index: 99999; background: #ffffff; }
-    html[data-theme="dark"] #intro { background: #0d0d0d; }
-    html[data-theme="custom"] #intro { background: var(--bg, #ffffff); }
+    /* The intro's opaque backdrop lives on ::before, not on #intro itself, so
+       it can fade away independently while the name pill stays fully visible
+       and flies up to the nav. */
+    #intro { position: fixed; inset: 0; z-index: 99999; }
+    #intro::before { content: ""; position: absolute; inset: 0; background: #ffffff; }
+    html[data-theme="dark"] #intro::before { background: #0d0d0d; }
+    html[data-theme="custom"] #intro::before { background: var(--bg, #ffffff); }
     html.intro-done #intro { display: none !important; }
+    /* Hold the home page + nav still while the intro plays, so their entrance
+       animations aren't spent behind the backdrop. `animation: none` matters —
+       a running CSS animation outranks a plain opacity declaration and would
+       otherwise fade everything in while the backdrop still covers it.
+       Released on handoff (see initIntro). */
+    html.intro-pending #page-home,
+    html.intro-pending #page-home .project-card {
+      animation: none !important;
+      opacity: 0 !important;
+    }
+    html.intro-pending #nav-left,
+    html.intro-pending #nav-right,
+    html.intro-pending .nav-pill-center { opacity: 0; }
+    /* Promote the cards to their own compositor layers while the name is
+       still typing, so the layers are ready well before they animate.
+       Promoting at the same instant the animation starts costs a frame. */
+    html.intro-pending .project-card { will-change: transform, opacity; }
   </style>
   <script>
     (function () {
@@ -96,7 +117,13 @@
         }
       } catch (e) {}
       try {
-        if (sessionStorage.getItem("introSeen")) document.documentElement.classList.add("intro-done");
+        if (sessionStorage.getItem("introSeen")) {
+          document.documentElement.classList.add("intro-done");
+        } else if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          // Intro will play — hold the page/nav so their entrance can happen
+          // in the open, after the intro hands off (see initIntro).
+          document.documentElement.classList.add("intro-pending");
+        }
       } catch (e) {}
     })();
 
@@ -105,6 +132,7 @@
     window.__manifest = fetch("images/manifest.json")
       .then(r => r.ok ? r.json() : null)
       .catch(() => null);
+
   </script>
 
   <style>
@@ -1769,27 +1797,93 @@
       position: fixed;
       inset: 0;
       z-index: 99999;
-      background: var(--bg);
       display: flex;
       align-items: center;
       justify-content: center;
       pointer-events: all;
-      /* Curtain clears fast so the cascade/nav choreography plays in the open,
-         not masked behind a slow white fade. */
-      transition: opacity 320ms var(--ease-out), background 200ms ease;
+      transition: opacity 320ms var(--ease-out);
     }
+    /* The backdrop fades on its own (opacity, so it works in every theme —
+       the per-theme rules only set its colour). The pill sits above it and
+       stays crisp the whole way up to the nav. */
+    #intro::before {
+      transition: opacity 340ms var(--ease-out);
+    }
+    #intro.reveal::before { opacity: 0; }
+    #intro.reveal { pointer-events: none; }
     #intro.intro-exit {
       opacity: 0;
       pointer-events: none;
     }
-    /* Fly-to-nav exit: page shows through while the pill travels up to the nav */
-    #intro.reveal {
-      background: transparent;
-      pointer-events: none;
+
+    /* Nav pills drop down to meet the name as it arrives */
+    @keyframes navDrop {
+      from { opacity: 0; transform: translateY(-10px); }
+      to   { opacity: 1; transform: none; }
+    }
+    /* Cards rise in during the handoff. Deliberately its own keyframe name
+       (not cardIn) — re-applying an animation with the *same* name doesn't
+       restart it, so the cards would silently stay put. */
+    /* Deliberately translate-only, no scale(). Scaling a card forces the
+       browser to re-rasterize the large cover image on every frame; a plain
+       translate is a pure GPU composite and stays smooth even with six of
+       them running at once. */
+    @keyframes introRise {
+      from { opacity: 0; transform: translateY(26px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    /* ── Keeping the handoff at 60fps ──────────────────────────────
+       Three things were making it stutter:
+       1. The travelling pill has backdrop-filter: blur(16px). Moving a
+          blurred element forces the browser to re-sample and re-blur what's
+          behind it every frame — and behind it everything is animating too.
+          Dropped for the ~0.5s flight; the real nav pill (still blurred)
+          takes over on landing.
+       2. Nothing was promoted to its own compositor layer, so each frame
+          repainted. will-change fixes that, and is removed afterwards so it
+          doesn't hold memory for the rest of the session.
+       3. The loading shimmer is an infinite animation on every card,
+          competing for the same frames. Paused during the entrance.
+       ─────────────────────────────────────────────────────────────── */
+    html.intro-entering #intro-group {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      will-change: transform;
+    }
+    html.intro-entering .project-card {
+      will-change: transform, opacity;
+    }
+    html.intro-entering .project-card::before {
+      animation: none !important;
+    }
+
+    /* 4. A card normally reveals in three separate steps: the card itself
+          animates in, then its cover fades up over 380ms once it loads, then
+          the shimmer overlay fades out over 280ms. Staggered across six cards
+          that reads as a second wave of movement arriving after the cascade
+          has already settled — the "two animations back to back".
+
+          During the entrance the cover is already decoded (we wait for it, see
+          whenCoversReady), so these two fades have nothing left to reveal.
+          Cut them to zero and let introRise carry the whole card as one motion.
+          Only the transitions are suppressed, never opacity itself — forcing
+          opacity here would make any late-loading cover flash back out when
+          .intro-entering is removed. */
+    html.intro-entering .project-card img,
+    html.intro-entering .project-card video,
+    html.intro-entering .project-card::before {
+      transition: none !important;
+    }
+    html.intro-entering #nav-left,
+    html.intro-entering #nav-right {
+      will-change: transform, opacity;
     }
 
     /* Pill — exact nav-pill spec */
     #intro-group {
+      position: relative;   /* above the fading backdrop */
+      z-index: 1;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1843,29 +1937,12 @@
       60%, 100% { opacity: 0; }
     }
 
-    /* Choreographed intro handoff: as the name flies up into the nav, the
-       side pills drop in from above to meet it — everything converges. */
-    @keyframes navPillDrop {
-      from { opacity: 0; transform: translateY(-9px); }
-      to   { opacity: 1; transform: none; }
-    }
-    html.intro-revealing #nav-left  { animation: navPillDrop 460ms var(--ease-out) 90ms both; }
-    html.intro-revealing #nav-right { animation: navPillDrop 460ms var(--ease-out) 150ms both; }
-
-    /* Cards cascade in as the intro hands off — a stronger, slower entrance
-       than the normal load, played AFTER the curtain clears so it's never
-       masked. Per-card delay is set inline (see restartCardAnimations). */
-    @keyframes cardCascade {
-      from { opacity: 0; transform: translateY(38px) scale(0.96); }
-      to   { opacity: 1; transform: none; }
-    }
-    .project-card.intro-cascade { animation: cardCascade 480ms var(--ease-out) both; }
-
     @media (prefers-reduced-motion: reduce) {
-      #intro, #intro-group { transition: none !important; }
-      html.intro-revealing #nav-left,
-      html.intro-revealing #nav-right { animation: none !important; }
-      .project-card.intro-cascade { animation: none !important; }
+      #intro, #intro-group, #intro::before { transition: none !important; }
+      html.intro-pending #page-home,
+      html.intro-pending #nav-left,
+      html.intro-pending #nav-right,
+      html.intro-pending .nav-pill-center { opacity: 1 !important; }
     }
   </style>
 </head>
@@ -1985,7 +2062,7 @@
             </div>
             <div class="info-section">
               <p class="info-label">Last Updated</p>
-              <p class="info-text"><!--LAST_UPDATED-->Jul 31. 2026<!--/LAST_UPDATED--></p>
+              <p class="info-text"><!--LAST_UPDATED-->Aug 5. 2026<!--/LAST_UPDATED--></p>
             </div>
             <p class="info-version">v2.2</p>
           </div>
@@ -2144,17 +2221,33 @@
     let SITE_MANIFEST  = null;
 
     function showPage(pageId) {
-      const old = document.getElementById("page-" + currentPage);
-      if (old) {
-        old.classList.remove("active");
-        old.style.display = "none";
-        old.querySelectorAll("video").forEach(v => { v.pause(); v.muted = true; });
+      const next = document.getElementById("page-" + pageId);
+      // If this page is already the one on screen, don't tear it down and
+      // force a reflow — that restarts its `pageIn` animation, which reads as
+      // the whole page blinking out and fading back in. (Hits the very first
+      // render, where currentPage is already "home".)
+      const alreadyShowing = pageId === currentPage && next.classList.contains("active");
+
+      if (!alreadyShowing) {
+        const old = document.getElementById("page-" + currentPage);
+        if (old && old !== next) {
+          old.classList.remove("active");
+          old.style.display = "none";
+          // Drop any inline animation override (the intro puts `none` on
+          // #page-home so its fade doesn't compound with the card cascade).
+          // Clearing it here is the only safe moment: the element is hidden,
+          // so re-enabling the stylesheet's `pageIn` can't visibly restart it.
+          // Next time this page is shown, pageIn runs normally.
+          old.style.animation = "";
+          old.querySelectorAll("video").forEach(v => { v.pause(); v.muted = true; });
+        }
+        currentPage = pageId;
+        next.style.display = "";
+        void next.offsetWidth;
+        next.classList.add("active");
+      } else {
+        currentPage = pageId;
       }
-      currentPage = pageId;
-      const next = document.getElementById("page-" + currentPage);
-      next.style.display = "";
-      void next.offsetWidth;
-      next.classList.add("active");
 
       // Restart cover videos on the home grid
       if (pageId === "home") {
@@ -3150,7 +3243,11 @@
         media = document.createElement("img");
         media.src = project.cover;
         media.alt = project.title;
-        media.loading = "lazy";
+        // NOT lazy: these covers are the home page — lazy-loading the main
+        // content just delays it, and a cover that arrives after the intro
+        // has to fade in on its own, which reads as a second animation.
+        media.loading = "eager";
+        media.fetchPriority = "high";
         media.decoding = "async";
         media.width = 800;
         media.height = 600;
@@ -4165,11 +4262,16 @@
       const introText   = document.getElementById("intro-text");
       const introCursor = document.getElementById("intro-cursor");
 
-      if (!intro) return;
+      // Any path that skips the intro must un-hold the page, or it would
+      // stay invisible (see the .intro-pending rule in <head>).
+      const unhold = () => document.documentElement.classList.remove("intro-pending");
+
+      if (!intro) { unhold(); return; }
 
       // Skip after first view this session
       if (sessionStorage.getItem("introSeen")) {
         intro.style.display = "none";
+        unhold();
         return;
       }
 
@@ -4177,8 +4279,19 @@
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         intro.style.display = "none";
         sessionStorage.setItem("introSeen", "1");
+        unhold();
         return;
       }
+
+      // Safety net. The typing runs on requestAnimationFrame, which browsers
+      // pause entirely in a backgrounded tab — so if the site is opened in a
+      // tab that never gets focused, the intro would sit there half-typed.
+      // After 6s, just finish: show the whole name and hand off.
+      const bail = setTimeout(() => {
+        if (document.documentElement.classList.contains("intro-done")) return;
+        introText.textContent = NAME;
+        exitIntro();
+      }, 6000);
 
       const NAME       = "Vegar Efteland Melhus";
       const CHAR_MS    = 55;
@@ -4192,76 +4305,189 @@
       introGroup.style.minWidth = introGroup.offsetWidth + "px";
       introText.textContent = "";
 
-      let charIndex = 0;
-
+      // Typing is driven off requestAnimationFrame rather than a chain of
+      // setTimeouts: chained timers drift and fire between frames, so letters
+      // land at uneven intervals and the whole thing reads as stuttery. This
+      // derives how many characters *should* be visible from elapsed time, so
+      // it stays even no matter how the frames fall.
       function typeNext() {
-        if (charIndex < NAME.length) {
-          introText.textContent += NAME[charIndex++];
-          setTimeout(typeNext, CHAR_MS);
-        } else {
-          setTimeout(exitIntro, HOLD_MS);
+        const start = performance.now();
+        let shown = 0;
+        function tick(now) {
+          const target = Math.min(NAME.length, Math.floor((now - start) / CHAR_MS));
+          if (target > shown) {
+            shown = target;
+            introText.textContent = NAME.slice(0, shown);
+          }
+          if (shown < NAME.length) requestAnimationFrame(tick);
+          else setTimeout(exitIntro, HOLD_MS);
         }
+        requestAnimationFrame(tick);
       }
 
-      function restartCardAnimations() {
-        const cards = document.querySelectorAll(".project-card");
-        cards.forEach((card, i) => {
-          card.classList.add("intro-cascade");   // switch to the stronger cascade
-          card.style.animation = "none";
-          void card.offsetWidth;                  // reflow → restart the animation
-          card.style.animation = "";              // revert to .intro-cascade rule
-          // Start right as the 200ms curtain clears, staggered clearly so it
-          // reads as a choreographed cascade, not a pop-in.
-          card.style.animationDelay = (150 + i * 60) + "ms";
+      /* ── The handoff ────────────────────────────────────────────────
+       * Everything below runs at once, overlapping, so the site assembles
+       * itself around the name rather than appearing after it:
+       *
+       *   0ms    backdrop starts fading   (340ms)
+       *   0ms    name pill flies to nav   (560ms)
+       *   90ms   left nav pill drops in   (400ms)
+       *   150ms  right nav pill drops in  (400ms)
+       *   160ms  cards cascade upward     (460ms each, 45ms apart)
+       *   560ms  pill lands → real nav pill takes over
+       *
+       * Animations are set inline with fill "both", so each element holds
+       * its finished state and there's no class to clean up afterwards.
+       * ────────────────────────────────────────────────────────────── */
+      const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";   // matches --ease-out
+
+      function releasePage() {
+        document.documentElement.classList.remove("intro-pending");
+      }
+
+      function animateSiteIn() {
+        const navL = document.getElementById("nav-left");
+        const navR = document.getElementById("nav-right");
+        if (navL) navL.style.animation = `navDrop 400ms ${EASE} 90ms both`;
+        if (navR) navR.style.animation = `navDrop 400ms ${EASE} 150ms both`;
+
+        // Let the cards carry the motion on their own — suppress the page
+        // container's own fade so the two don't compound into a mushy blur.
+        const home = document.getElementById("page-home");
+        if (home) home.style.animation = "none";
+
+        // Cards rise in, staggered, as the name travels up.
+        document.querySelectorAll(".project-card").forEach((card, i) => {
+          card.style.animation = `introRise 460ms ${EASE} ${160 + i * 45}ms both`;
         });
       }
 
       function finishIntro() {
+        clearTimeout(bail);
         intro.style.display = "none";
         sessionStorage.setItem("introSeen", "1");
         document.documentElement.classList.add("intro-done");
+        releasePage();
+        // NOTE: do *not* clear #page-home's inline `animation: none` here.
+        // This fires at 560ms, while the cards are still cascading (the last
+        // one lands ~845ms). Clearing the inline value doesn't leave the
+        // animation off — it re-exposes the stylesheet's
+        // `.page { animation: pageIn ... }`, which then starts from
+        // `opacity: 0`. The result is the whole grid blanking out and fading
+        // back in on top of cards that had already arrived.
+        //
+        // showPage() clears it instead, when the page is hidden on the way
+        // out, so later navigations still get their normal pageIn fade.
       }
 
-      function exitIntro() {
-        introCursor.classList.add("hidden");
+      /* ── Wait for the covers before the cascade ──────────────────────
+       * A cover that arrives mid-cascade fades itself in on its own clock,
+       * landing after the cards have already settled — that's the second
+       * animation. The intro gives us ~2s of free runway while the name
+       * types, which is normally plenty. Capped, so a slow connection can
+       * delay the site by at most COVER_WAIT_MS rather than hanging it.
+       * ────────────────────────────────────────────────────────────── */
+      const COVER_WAIT_MS = 900;
 
+      function whenCoversReady() {
+        const media = [...document.querySelectorAll(
+          "#page-home .project-card img, #page-home .project-card video")];
+
+        const ready = media.map(m => {
+          if (m.tagName === "VIDEO") {
+            if (m.readyState >= 2) return Promise.resolve();
+            return new Promise(res => {
+              m.addEventListener("loadeddata", res, { once: true });
+              m.addEventListener("error", res, { once: true });
+            });
+          }
+          // decode() finishes the expensive part (turning bytes into pixels)
+          // off the main thread, so the first paint during the cascade is free.
+          const decode = () => (m.decode ? m.decode().catch(() => {}) : Promise.resolve());
+          if (m.complete) return m.naturalWidth > 0 ? decode() : Promise.resolve();
+          return new Promise(res => {
+            m.addEventListener("load", () => decode().then(res), { once: true });
+            m.addEventListener("error", res, { once: true });   // broken cover shouldn't stall the site
+          });
+        });
+
+        return Promise.race([
+          Promise.all(ready),
+          new Promise(res => setTimeout(res, COVER_WAIT_MS)),
+        ]);
+      }
+
+      let exiting = false;
+      function exitIntro() {
+        if (exiting) return;            // bail timer and the typing can both land here
+        exiting = true;
+        introCursor.classList.add("hidden");
+        whenCoversReady().then(runExit);
+      }
+
+      function runExit() {
         const navPill = document.querySelector(".nav-pill-center");
         const navRect = navPill ? navPill.getBoundingClientRect() : null;
-        const canFly  = navRect && navRect.width > 0 &&
-                        !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const canFly  = navRect && navRect.width > 0;
+
+        // Reveal the page *first* so the choreography below is actually
+        // visible while the backdrop fades away over it.
+        releasePage();
+        if (navPill) navPill.style.opacity = "0";   // the flying pill stands in for it
+
+        // Promote the moving pieces + drop the pill's backdrop blur for the
+        // duration of the entrance (see the .intro-entering rules).
+        const root = document.documentElement;
+        root.classList.add("intro-entering");
+
+        animateSiteIn();
+        intro.classList.add("reveal");
+
+
+        // Last card lands at ~845ms; release the layer hints just after.
+        setTimeout(() => {
+          root.classList.remove("intro-entering");
+          document.querySelectorAll(".project-card").forEach(c => { c.style.willChange = ""; });
+        }, 1000);
 
         if (canFly) {
-          // Fly the intro pill up to the real nav pill's exact spot, revealing
-          // the page behind it — then hand off to the (identical) nav pill.
           const from = introGroup.getBoundingClientRect();
           const dx = (navRect.left + navRect.width  / 2) - (from.left + from.width  / 2);
           const dy = (navRect.top  + navRect.height / 2) - (from.top  + from.height / 2);
 
-          navPill.style.opacity = "0";        // hide the real one so they don't double up
-          document.documentElement.classList.add("intro-revealing"); // side pills drop in
-          restartCardAnimations();            // cards cascade in, overlapping the flight
-          intro.classList.add("reveal");      // background → transparent
-
-          introGroup.style.transition = "transform 620ms var(--ease-out)";
+          introGroup.style.transition = `transform 560ms ${EASE}`;
           requestAnimationFrame(() => {
             introGroup.style.transform = `translate(${dx}px, ${dy}px)`;
           });
 
+
           setTimeout(() => {
             finishIntro();
-            navPill.style.opacity = "";        // real nav pill takes over, same spot
-          }, 640);
-          // Clean up the transient reveal class once the entrance has settled
-          setTimeout(() => document.documentElement.classList.remove("intro-revealing"), 1150);
+            if (navPill) navPill.style.opacity = "";   // real pill takes over, same spot
+          }, 560);
         } else {
-          // Fallback (mobile / reduced-motion / no nav pill): quick curtain,
-          // then the same pronounced card cascade so it's not a bare pop-in.
-          restartCardAnimations();
-          introGroup.classList.add("intro-exit");
-          intro.classList.add("intro-exit");    // overlay fades out
-          setTimeout(finishIntro, 380);
+          // No centre pill to fly to (mobile) — the name lifts and fades out
+          // while the page continues assembling underneath.
+          introGroup.style.transition = `transform 380ms ${EASE}, opacity 380ms ease`;
+          requestAnimationFrame(() => {
+            introGroup.style.opacity = "0";
+            introGroup.style.transform = "translateY(-14px)";
+          });
+          setTimeout(() => {
+            finishIntro();
+            if (navPill) navPill.style.opacity = "";
+          }, 400);
         }
       }
+
+      // While the name is typing, quietly decode the cover images. Without
+      // this the first paint of each card has to decode mid-cascade, which
+      // shows up as a stutter exactly when the cards are moving.
+      setTimeout(() => {
+        document.querySelectorAll(".project-card img").forEach(img => {
+          if (img.decode) img.decode().catch(() => {});
+        });
+      }, 250);
 
       // Kick off
       setTimeout(() => introGroup.classList.add("visible"), GROUP_IN);
