@@ -51,6 +51,16 @@ const SITE = {
         "School assignments and concept design work.",
     },
     {
+      title: "Motion Graphics & Animation",
+      folder: "05",
+      cover: "images/projects/05/cover.mp4",
+      color: "#E8E0D5",
+      wip: false,
+      year: "2025–2026",
+      description:
+        "Selection of motion and animation projects, made in school and personal work contexts.\n\n\n<strong>(01) Showreel</strong>\n\nPromotional video showcasing motion and design work.\n\nTools Used: After Effects, Premiere Pro & Photoshop\n\n\n<strong>(02) Animation Course — Group Project</strong>\n\nSelected scene of my part in a group final assignment.\n\nIn collaboration with Jonathan Kindingstad & Elias Olai Skog\n\nTools used: After Effects, Premiere Pro, Photoshop & InDesign",
+    },
+    {
       title: "Modular Desk Interface – 3D Modeling",
       folder: "04",
       cover: "images/projects/04/cover.webp",
@@ -61,16 +71,6 @@ const SITE = {
         "Modular Desk Interface concept. Inspired by the design language of Braun and Teenage Engineering. " +
         "Built around physical buttons and knobs, materials include sandblasted steel with a matte finish.\n\n" +
         "Modeled and rendered in Blender.",
-    },
-         {
-      title: "Motion Graphics & Animation",
-      folder: "05",
-      cover: "images/projects/05/cover.mp4",
-      color: "#E8E0D5",
-      wip: false,
-      year: "2025–2026",
-      description:
-        "Selection of motion and animation projects, made in school and personal work contexts.\n\n\n<strong>(01) Showreel</strong>\n\nPromotional video showcasing motion and design work.\n\nTools Used: After Effects, Premiere Pro & Photoshop\n\n\n<strong>(02) Animation Course — Group Project</strong>\n\nSelected scene of my part in a group final assignment.\n\nIn collaboration with Jonathan Kindingstad & Elias Olai Skog\n\nTools used: After Effects, Premiere Pro, Photoshop & InDesign",
     },
     {
       title: "Personal Branding",

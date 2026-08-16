@@ -127,6 +127,20 @@ function findNumbered(dir, num) {
   return null;
 }
 
+/* Still frame shown before a sound video is started.
+   Player videos load with preload="none" (they're large and wait for a
+   deliberate press), so without a poster the box is simply blank until you
+   hit play. Drop NN_player_poster.webp beside NN_player.mp4 and it's picked
+   up automatically — the name can't collide with the numbered-item scan,
+   which only matches NN.<ext>. */
+function findPoster(dir, relDir, num) {
+  for (const e of IMG_EXT) {
+    const f = path.join(dir, `${num}_player_poster${e}`);
+    if (fs.existsSync(f)) return `${relDir}/${num}_player_poster${e}`;
+  }
+  return null;
+}
+
 // A "row" folder: NN/ containing 01.<img>, 02.<img> …
 function readRow(absDir, relDir) {
   const items = [];
@@ -158,7 +172,8 @@ function readSequence(absDir, relDir) {
     const player = path.join(absDir, `${num}_player.mp4`);
     if (fs.existsSync(player)) {
       const d = measure(player) || {};
-      out.push({ type: "video", src: `${relDir}/${num}_player.mp4`, sound: true, w: d.w || null, h: d.h || null });
+      out.push({ type: "video", src: `${relDir}/${num}_player.mp4`, sound: true,
+                 poster: findPoster(absDir, relDir, num), w: d.w || null, h: d.h || null });
       continue;
     }
 
@@ -208,7 +223,8 @@ function readProject(folder) {
     const player = path.join(absP, `${num}_player.mp4`);
     if (fs.existsSync(player)) {
       const d = measure(player) || {};
-      items.push({ type: "video", src: `${rel}/${num}_player.mp4`, sound: true, w: d.w || null, h: d.h || null });
+      items.push({ type: "video", src: `${rel}/${num}_player.mp4`, sound: true,
+                   poster: findPoster(absP, rel, num), w: d.w || null, h: d.h || null });
       continue;
     }
     const name = findNumbered(absP, num);

@@ -22,7 +22,7 @@
        list of which images exist, that shows the old set: new pictures
        missing, deleted ones still there. Must match the fetch below exactly,
        or the preload is thrown away and the file is fetched twice. -->
-  <link rel="preload" as="fetch" href="images/manifest.json?v=20260816164017" crossorigin>
+  <link rel="preload" as="fetch" href="images/manifest.json?v=20260816195853" crossorigin>
   <link rel="preload" as="image" href="images/projects/01/cover.webp" fetchpriority="high">
   <link rel="preload" as="image" href="images/projects/03/cover.webp" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -109,6 +109,7 @@
             var navInk = ink(h);
             root.style.setProperty("--nav-bg", "rgba("+r+","+g+","+b+",0.88)");
               root.style.setProperty("--pill-bg", "rgba("+r+","+g+","+b+",0.62)");
+              root.style.setProperty("--pill-solid", h);
             root.style.setProperty("--nav-fg", navInk);
             root.style.setProperty("--tag-bg", h);
             root.style.setProperty("--tag-fg", navInk);
@@ -123,6 +124,15 @@
           }
         }
       } catch (e) {}
+      // Pill surface, applied before first paint so it can't flash the
+      // default and then swap. Stored with the other customise settings.
+      try {
+        var pc = JSON.parse(localStorage.getItem("customColors") || "{}");
+        if (pc.pill === "liquid" || pc.pill === "aurora") {
+          document.documentElement.setAttribute("data-pill", pc.pill);
+        }
+      } catch (e) {}
+
       try {
         if (sessionStorage.getItem("introSeen")) {
           document.documentElement.classList.add("intro-done");
@@ -139,7 +149,7 @@
     // The version below is rewritten on every commit by the pre-commit hook;
     // keep it identical to the preload href in <head> or the browser treats
     // them as two different files and downloads it twice.
-    var MANIFEST_V = "20260816164017";
+    var MANIFEST_V = "20260816195853";
     window.__manifest = fetch("images/manifest.json?v=" + MANIFEST_V)
       .then(r => r.ok ? r.json() : null)
       .catch(() => null);
@@ -183,6 +193,7 @@
       --tag-border: transparent;
       --nav-bg:     rgba(255, 255, 255, 0.88);
       --pill-bg:    rgba(255, 255, 255, 0.62);
+      --pill-solid: #e7e9ee;
       --sheen:        rgba(0, 0, 0, 0.07);
       --sheen-strong: rgba(0, 0, 0, 0.14);
       --placeholder:#d4d4d4;
@@ -205,6 +216,7 @@
       --tag-border: rgba(255, 255, 255, 0.25);
       --nav-bg:     rgba(13, 13, 13, 0.88);
       --pill-bg:    rgba(13, 13, 13, 0.62);
+      --pill-solid: #3a3d44;
       --sheen:        rgba(255, 255, 255, 0.16);
       --sheen-strong: rgba(255, 255, 255, 0.34);
       --placeholder:#1e1e1e;
@@ -224,6 +236,7 @@
       --tag-border: transparent;
       --nav-bg:     rgba(255, 255, 255, 0.88);
       --pill-bg:    rgba(255, 255, 255, 0.62);
+      --pill-solid: #e7e9ee;
       --sheen:        rgba(0, 0, 0, 0.07);
       --sheen-strong: rgba(0, 0, 0, 0.14);
       --placeholder:#d4d4d4;
@@ -259,13 +272,13 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--muted);
+      color: var(--pill-ink-quiet);
       padding: 0;
       border-radius: 50%;
       transition: color 180ms ease, background 180ms ease;
       flex-shrink: 0;
     }
-    .theme-toggle:hover { color: var(--nav-fg); background: rgba(128,128,128,0.1); }
+    .theme-toggle:hover { color: var(--pill-ink); background: rgba(128,128,128,0.1); }
     .theme-toggle svg {
       position: absolute;
       width: 15px;
@@ -374,7 +387,7 @@
       font-family: var(--font);
       font-size: 13.5px;
       font-weight: 400;
-      color: var(--nav-fg);
+      color: var(--pill-ink);
       user-select: none;
       white-space: nowrap;
       /* hover-out: wait for wheel to disappear, then slide name back in */
@@ -416,7 +429,7 @@
     .skills-reel span {
       font-size: 13.5px;
       font-weight: 400;
-      color: var(--nav-fg);
+      color: var(--pill-ink);
       white-space: nowrap;
       height: 36px;
       line-height: 36px;
@@ -445,7 +458,7 @@
     .home-label span {
       font-size: 13.5px;
       font-weight: 400;
-      color: var(--nav-fg);
+      color: var(--pill-ink);
       transform: translateY(36px); /* sits below the pill, ready to slide up */
       opacity: 0;
       /* hover-out: slide back down before the name returns */
@@ -462,12 +475,12 @@
       font-family: var(--font);
       font-size: 13.5px;
       font-weight: 400;
-      color: var(--muted);
+      color: var(--pill-ink-quiet);
       transition: color 180ms ease;
       cursor: pointer;
     }
-    .nav-pill a.active { color: var(--nav-fg); }
-    .nav-pill a:hover  { color: var(--nav-fg); }
+    .nav-pill a.active { color: var(--pill-ink); }
+    .nav-pill a:hover  { color: var(--pill-ink); }
     .nav-pill a:focus-visible {
       outline: 2px solid var(--nav-fg);
       outline-offset: 3px;
@@ -561,7 +574,7 @@
       top: 12px;
       left: 12px;
       background: var(--pill-bg, var(--nav-bg));
-      color: var(--nav-fg);
+      color: var(--pill-ink);
       backdrop-filter: blur(22px) saturate(1.6);
       -webkit-backdrop-filter: blur(22px) saturate(1.6);
       border: 1px solid rgba(0, 0, 0, 0.07);
@@ -582,7 +595,7 @@
       width: 30px;
       height: 30px;
       background: var(--pill-bg, var(--nav-bg));
-      color: var(--nav-fg);
+      color: var(--pill-ink);
       backdrop-filter: blur(22px) saturate(1.6);
       -webkit-backdrop-filter: blur(22px) saturate(1.6);
       border: 1px solid rgba(0, 0, 0, 0.07);
@@ -623,7 +636,7 @@
     .section-tag {
       display: inline-block;
       background: var(--pill-bg, var(--nav-bg));
-      color: var(--nav-fg);
+      color: var(--pill-ink);
       backdrop-filter: blur(22px) saturate(1.6);
       -webkit-backdrop-filter: blur(22px) saturate(1.6);
       border: 1px solid rgba(0, 0, 0, 0.07);
@@ -739,7 +752,7 @@
     .customize-btn {
       position: relative;
       background: var(--pill-bg, var(--nav-bg));
-      color: var(--nav-fg);
+      color: var(--pill-ink);
       backdrop-filter: blur(22px) saturate(1.6);
       -webkit-backdrop-filter: blur(22px) saturate(1.6);
       border: 1px solid rgba(0, 0, 0, 0.07);
@@ -806,7 +819,7 @@
     /* Info button & panel */
     .info-btn {
       background: var(--pill-bg, var(--nav-bg));
-      color: var(--nav-fg);
+      color: var(--pill-ink);
       backdrop-filter: blur(22px) saturate(1.6);
       -webkit-backdrop-filter: blur(22px) saturate(1.6);
       border: 1px solid rgba(0, 0, 0, 0.07);
@@ -995,6 +1008,46 @@
         0 1px 3px rgba(0, 0, 0, 0.18);
       transition: transform 180ms var(--ease-out);
     }
+    /* Each swatch previews its own surface, so the choice is readable before
+       it's made. Pill-shaped rather than round like the colour presets —
+       it's a shape choice, not a colour one. */
+    .pill-style {
+      width: 30px;
+      height: 17px;
+      border-radius: 100px;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      padding: 0;
+      cursor: pointer;
+      opacity: 0.55;
+      transition: opacity 200ms ease, transform 200ms var(--ease-out);
+    }
+    .pill-style:hover { transform: scale(1.12); opacity: 0.85; }
+    .pill-style.active { opacity: 1; box-shadow: 0 0 0 2px var(--fg); }
+    .pill-style:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(127,127,127,0.6); }
+    [data-theme="dark"] .pill-style { border-color: rgba(255, 255, 255, 0.16); }
+
+    .pill-style[data-pill="glass"] {
+      background: var(--pill-bg, rgba(255,255,255,0.62));
+      backdrop-filter: blur(10px) saturate(1.6);
+      -webkit-backdrop-filter: blur(10px) saturate(1.6);
+    }
+    .pill-style[data-pill="liquid"] {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0.08) 45%,
+                                rgba(255,255,255,0.35) 100%),
+        var(--pill-bg, rgba(255,255,255,0.62));
+      box-shadow: inset 0 1px 1px rgba(255,255,255,0.95), inset 0 -1px 1px rgba(255,255,255,0.6);
+    }
+    .pill-style[data-pill="aurora"] {
+      background: radial-gradient(115% 135% at 50% 8%,
+        color-mix(in srgb, var(--pill-solid) 92%, #ffffff) 0%,
+        color-mix(in srgb, var(--pill-solid) 78%, #ffffff) 30%,
+        color-mix(in srgb, var(--pill-solid) 34%, #ffffff) 62%,
+        #ffffff 100%);
+      box-shadow: inset 0 -4px 7px rgba(255,255,255,0.85);
+      border-color: rgba(255,255,255,0.9);
+    }
+
     .preset:hover { transform: scale(1.12); }
     .preset:focus-visible {
       outline: none;
@@ -1198,6 +1251,166 @@
       user-select: none;
       -webkit-user-select: none;
     }
+    /* Faint grid behind the pile, so the images read as laid out on a surface
+       rather than floating in a void. It's a separate layer rather than a
+       background on the viewport itself, because the fade needs a mask — and
+       masking the viewport would fade the images with it.
+
+       z-index 0 puts it under every cell (they carry 1–7, higher once
+       dragged). The line colour is mixed from --fg, so it follows the theme
+       instead of needing a light and a dark value. */
+    .archive-viewport.is-sandbox::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(to right,  var(--sandbox-grid-line) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--sandbox-grid-line) 1px, transparent 1px);
+      background-size: 52px 52px;
+      /* Strongest in the middle, gone well before the edges. The ending shape
+         is sized to the SHORTER axis (70% of the box) rather than the longer
+         one — on a wide screen a circle scaled to the width still has plenty
+         of ink left at the top and bottom edges, which is what left visible
+         lines in the corners. */
+      -webkit-mask-image: radial-gradient(70% 70% at 50% 48%,
+        #000 0%, rgba(0,0,0,0.75) 40%, rgba(0,0,0,0.28) 70%, transparent 100%);
+      mask-image: radial-gradient(70% 70% at 50% 48%,
+        #000 0%, rgba(0,0,0,0.75) 40%, rgba(0,0,0,0.28) 70%, transparent 100%);
+    }
+
+    /* Filed images are only out of sight inside the sandbox. The folder is a
+       sandbox idea; Grid and Orbit should still show the whole archive. Doing
+       this inline used to hide them everywhere, which left gaps in the ring. */
+    .archive-grid.mode-sandbox .archive-img.is-filed { display: none; }
+
+    /* ── Sandbox folder ─────────────────────────────────────────────
+       Flat, two-tone, built from three stacked panels: a back (with the tab),
+       the filed images, and a front. Because the images sit BETWEEN back and
+       front they appear tucked inside, and each new one peeks a little higher
+       — that's the "filling up". Tones are mixed from --fg so it reads in
+       both themes without a second set of colours. */
+    .sandbox-folder {
+      position: absolute;
+      left: 22px;
+      bottom: 22px;
+      width: 104px;
+      /* 104 / (120/96) — matches the SVG viewBox ratio exactly, so the folder
+         fills its box instead of being letterboxed inside it. */
+      height: 83px;
+      z-index: 8;              /* above every resting cell (1–7), below a dragged one (10+) */
+      display: none;
+      cursor: pointer;
+      background: none;
+      border: 0;
+      padding: 0;
+      transition: transform 260ms var(--ease-out);
+    }
+    .archive-viewport.is-sandbox .sandbox-folder { display: block; }
+
+    .folder-back,
+    .folder-front {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+    /* Solid, in the site's own ink — black on light, white on dark. */
+    .folder-back path,
+    .folder-front .fld-face { fill: var(--fg); stroke: var(--fg); }
+    /* The seam: page colour, drawn wider, so it separates the panels. */
+    .folder-front .fld-seam { fill: var(--bg); stroke: var(--bg); }
+
+    /* The flap tilts forward on its bottom edge, which is what separates the
+       open state from the closed one in the reference. rotateX with a short
+       perspective reads as a real hinge; a skew would just look sheared. */
+    .folder-front {
+      transform-origin: 50% 92%;
+      transition: transform 320ms var(--ease-out);
+    }
+    .sandbox-folder.is-open .folder-front {
+      transform: skewX(-6deg) translate(3px, 4px) scaleY(0.94);
+    }
+
+    /* Filed images sit between the panels and poke up over the fold. Only a
+       few are ever shown — the count carries the real number. */
+    .folder-items {
+      position: absolute;
+      left: 16%;
+      right: 16%;
+      bottom: 30%;
+      height: 34px;
+      pointer-events: none;
+    }
+    .folder-items img {
+      position: absolute;
+      bottom: 0;
+      width: 30px;
+      height: 34px;
+      object-fit: cover;
+      border-radius: 3px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+      transform-origin: 50% 100%;
+      animation: folderTuck 340ms var(--ease-out) both;
+    }
+    @keyframes folderTuck {
+      from { transform: translateY(-24px) scale(1.2); opacity: 0; }
+      to   { transform: translateY(0) scale(1);       opacity: 1; }
+    }
+
+    .folder-count {
+      position: absolute;
+      right: -6px;
+      top: -6px;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 100px;
+      background: var(--fg);
+      color: var(--bg);
+      box-shadow: 0 0 0 2px var(--bg);   /* separates it from the solid folder */
+      font-size: 11.5px;
+      font-weight: 500;
+      line-height: 20px;
+      text-align: center;
+      opacity: 0;
+      transform: scale(0.6);
+      transition: opacity 200ms ease, transform 260ms var(--ease-out);
+    }
+    .sandbox-folder.has-items .folder-count { opacity: 1; transform: scale(1); }
+
+    /* Opens as an image comes over it. */
+    .sandbox-folder.is-target { transform: translateY(-3px) scale(1.04); }
+    .sandbox-folder.is-target .folder-front .fld-face { fill: var(--fg); stroke: var(--fg); }
+    .sandbox-folder:hover { transform: translateY(-2px); }
+    /* Something inside? Lean a little, without a full open. */
+    .sandbox-folder.has-items .folder-front {
+      transform: skewX(-3deg) translate(1px, 2px);
+    }
+    /* Fully open while hovered or receiving — listed after so it wins. */
+    .sandbox-folder:hover .folder-front,
+    .sandbox-folder.is-target .folder-front {
+      transform: skewX(-7deg) translate(4px, 5px) scaleY(0.92);
+    }
+    .sandbox-folder:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--fg);
+      border-radius: 8px;
+    }
+    /* A quick squash as it swallows one. */
+    .sandbox-folder.just-filed { animation: folderPop 320ms var(--ease-out); }
+    @keyframes folderPop {
+      0%   { transform: scale(1); }
+      35%  { transform: scale(0.94, 1.06); }
+      100% { transform: scale(1); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .sandbox-folder, .folder-items img { animation: none; transition: none; }
+    }
+
     /* The archive blurb would otherwise sit behind the full-screen pile. */
     html.archive-sandbox .archive-intro { visibility: hidden; }
     /* Rotation and scale go on the CELL here, not on the image.
@@ -1401,7 +1614,7 @@
       font-family: var(--font);
       font-size: 12.5px;
       font-weight: 400;
-      color: var(--muted);
+      color: var(--pill-ink-quiet);
       background: none;
       border: 0;
       border-radius: 100px;
@@ -1846,7 +2059,7 @@
       align-items: center;
       justify-content: center;
       background: var(--pill-bg, var(--nav-bg));
-      color: var(--nav-fg);
+      color: var(--pill-ink);
       backdrop-filter: blur(22px) saturate(1.6);
       -webkit-backdrop-filter: blur(22px) saturate(1.6);
       border: 1px solid rgba(0, 0, 0, 0.07);
@@ -1860,6 +2073,7 @@
       transition: opacity 260ms var(--ease-out), transform 260ms var(--ease-out);
     }
     .video-play svg { width: 22px; height: 22px; display: block; }
+
     /* The triangle is drawn symmetrically about the box centre, so this is the
        only horizontal offset: a small optical nudge, because a right-pointing
        shape carries its visual weight to the left and reads off-centre when
@@ -1895,7 +2109,7 @@
       justify-content: center;
       padding: 0;
       background: var(--pill-bg, var(--nav-bg));
-      color: var(--nav-fg);
+      color: var(--pill-ink);
       backdrop-filter: blur(22px) saturate(1.6);
       -webkit-backdrop-filter: blur(22px) saturate(1.6);
       border: 1px solid rgba(0, 0, 0, 0.07);
@@ -1933,6 +2147,199 @@
     [data-theme="dark"] .mute-btn,
     [data-theme="dark"] .volume-wrap { border-color: rgba(255, 255, 255, 0.07); }
 
+    /* ═══════════════════════════════════════════════════════════════
+     * PILL STYLES
+     *
+     * Every floating control on the site — nav, tags, card labels, the whole
+     * video player — shares one surface. `data-pill` on <html> swaps that
+     * surface for all of them at once.
+     *
+     * Built from layered background-images rather than pseudo-elements,
+     * because .customize-btn and .focus-btn already use ::after for their
+     * sheen and would collide. Colours come through --pill-ink so text and
+     * icons stay legible on a surface that ignores the theme (aurora).
+     * ═══════════════════════════════════════════════════════════════ */
+
+    :root {
+      --pill-ink: var(--nav-fg);
+      /* The resting state of controls sitting ON a pill. Derived from the
+         pill's own ink so it stays legible on a coloured surface, where the
+         fixed --muted grey washed out. */
+      --pill-ink-quiet: color-mix(in srgb, var(--pill-ink) 58%, transparent);
+      /* Sandbox backdrop grid. Mixed from the theme's own ink so it stays a
+         faint tint of the foreground in light, dark and custom alike. */
+      --sandbox-grid-line: rgba(128, 128, 128, 0.16);   /* fallback */
+      --sandbox-grid-line: color-mix(in srgb, var(--fg) 11%, transparent);
+      --pill-marker: var(--fg);
+      --pill-marker-ink: var(--bg);
+      --pill-radius-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+    }
+
+    .nav-pill, .project-label, .project-arrow, .section-tag,
+    .customize-btn, .info-btn, .video-play, .icon-btn,
+    .mute-btn, .volume-wrap, .focus-btn {
+      color: var(--pill-ink);
+      transition: background 320ms var(--ease-out), box-shadow 320ms var(--ease-out),
+                  color 320ms ease, filter 220ms ease;
+    }
+    .archive-mode-thumb { background: var(--pill-marker); }
+    .archive-mode-btn.is-on { color: var(--pill-marker-ink); }
+
+    /* Liquid takes its ink from the PAGE, not from the pill colour.
+       --nav-fg is contrast-picked against an opaque pill; at roughly 14%
+       opacity this surface barely tints anything, so what actually sits
+       behind the text is --bg. With a dark pill colour on a light page,
+       --nav-fg resolves to white and the label vanished into the background.
+       Declared in CSS rather than JS so it's right before first paint. */
+    html[data-pill="liquid"] { --pill-ink: var(--fg); }
+
+    /* ── 2. Liquid Glass ──────────────────────────────────────────────
+       Barely blurred on purpose: the reference lets you read straight through
+       the middle, and the whole effect lives at the rim. What sells it is that
+       the page behind actually BENDS around the shape — that's #pill-lens, an
+       SVG displacement filter run through backdrop-filter. Blur alone just
+       looks frosted; the bend is what looks like glass.
+
+       On top sits a faint iridescent wash that shifts as you approach, which
+       is the holographic part. It's a background layer rather than a
+       pseudo-element because .customize-btn and .focus-btn already use
+       ::after for their own sheen. */
+    html[data-pill="liquid"] .nav-pill,
+    html[data-pill="liquid"] .project-label,
+    html[data-pill="liquid"] .project-arrow,
+    html[data-pill="liquid"] .section-tag,
+    html[data-pill="liquid"] .customize-btn,
+    html[data-pill="liquid"] .info-btn,
+    html[data-pill="liquid"] .video-play,
+    html[data-pill="liquid"] .icon-btn,
+    html[data-pill="liquid"] .mute-btn,
+    html[data-pill="liquid"] .volume-wrap,
+    html[data-pill="liquid"] .focus-btn {
+      background:
+        linear-gradient(115deg,
+          rgba(255,120,190,0.10) 0%,  rgba(120,200,255,0.12) 22%,
+          rgba(150,255,220,0.08) 40%, rgba(255,235,150,0.11) 58%,
+          rgba(190,150,255,0.12) 78%, rgba(255,120,190,0.10) 100%),
+        linear-gradient(180deg, rgba(255,255,255,0.40) 0%, rgba(255,255,255,0.03) 34%,
+                                rgba(255,255,255,0.00) 56%, rgba(255,255,255,0.20) 100%),
+        color-mix(in srgb, var(--pill-solid) 14%, transparent);
+      background-size: 260% 100%, auto, auto;
+      background-position: 0% 50%, 0 0, 0 0;
+      backdrop-filter: blur(1.5px) saturate(175%) brightness(1.04);
+      -webkit-backdrop-filter: blur(1.5px) saturate(175%) brightness(1.04);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      box-shadow:
+        inset 0 1.5px 1px rgba(255,255,255,0.98),
+        inset 0 -1.5px 1px rgba(255,255,255,0.70),
+        inset 2px 0 3px -1px rgba(140, 200, 255, 0.45),   /* cool fringe, left  */
+        inset -2px 0 3px -1px rgba(255, 175, 205, 0.42),  /* warm fringe, right */
+        inset 0 0 14px rgba(255,255,255,0.26),
+        0 8px 26px rgba(0,0,0,0.15);
+      transition: background-position 900ms var(--ease-out), box-shadow 320ms var(--ease-out),
+                  color 320ms ease, filter 220ms ease;
+    }
+
+    /* The refraction only applies where url() backdrop filters are supported;
+       everywhere else the rim and blur above stand on their own. */
+    @supports ((backdrop-filter: url(#pill-lens)) or (-webkit-backdrop-filter: url(#pill-lens))) {
+      html[data-pill="liquid"] .nav-pill,
+    html[data-pill="liquid"] .project-label,
+    html[data-pill="liquid"] .project-arrow,
+    html[data-pill="liquid"] .section-tag,
+    html[data-pill="liquid"] .customize-btn,
+    html[data-pill="liquid"] .info-btn,
+    html[data-pill="liquid"] .video-play,
+    html[data-pill="liquid"] .icon-btn,
+    html[data-pill="liquid"] .mute-btn,
+    html[data-pill="liquid"] .volume-wrap,
+    html[data-pill="liquid"] .focus-btn {
+        backdrop-filter: blur(1.5px) saturate(175%) brightness(1.04) url(#pill-lens);
+        -webkit-backdrop-filter: blur(1.5px) saturate(175%) brightness(1.04) url(#pill-lens);
+      }
+    }
+
+    /* The iridescence travels across as you reach for it. */
+    html[data-pill="liquid"] .nav-pill:hover,
+    html[data-pill="liquid"] .section-tag:hover,
+    html[data-pill="liquid"] .icon-btn:hover,
+    html[data-pill="liquid"] .video-play:hover,
+    html[data-pill="liquid"] .info-btn:hover,
+    html[data-pill="liquid"] .customize-btn:hover,
+    html[data-pill="liquid"] .focus-btn:hover {
+      background-position: 100% 50%, 0 0, 0 0;
+      filter: brightness(1.06) saturate(1.12);
+    }
+
+    /* ── 3. Aurora — the soft "Create" button ─────────────────────────
+       The reference isn't a plain gradient: the colour sits as a core in the
+       upper middle and is wrapped by a thick, soft white glow that reads as a
+       frosted frame around it. That frame is the inset white shadow, not the
+       border. Every stop is mixed from --pill-solid, so it follows whatever
+       pill colour is chosen and starts neutral grey. */
+    html[data-pill="aurora"] .nav-pill,
+    html[data-pill="aurora"] .project-label,
+    html[data-pill="aurora"] .project-arrow,
+    html[data-pill="aurora"] .section-tag,
+    html[data-pill="aurora"] .customize-btn,
+    html[data-pill="aurora"] .info-btn,
+    html[data-pill="aurora"] .video-play,
+    html[data-pill="aurora"] .icon-btn,
+    html[data-pill="aurora"] .mute-btn,
+    html[data-pill="aurora"] .volume-wrap,
+    html[data-pill="aurora"] .focus-btn {
+      background:
+        radial-gradient(115% 135% at 50% 8%,
+          color-mix(in srgb, var(--pill-solid) 92%, #ffffff) 0%,
+          color-mix(in srgb, var(--pill-solid) 78%, #ffffff) 30%,
+          color-mix(in srgb, var(--pill-solid) 34%, #ffffff) 62%,
+          color-mix(in srgb, var(--pill-solid) 10%, #ffffff) 84%,
+          #ffffff 100%);
+      background-size: 150% 190%;
+      background-position: 50% 0%;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,0.85),
+        inset 0 -10px 18px rgba(255,255,255,0.85),   /* the frosted frame */
+        inset 0 10px 16px rgba(255,255,255,0.45),
+        0 8px 26px color-mix(in srgb, var(--pill-solid) 42%, transparent);
+      transition: background-position 600ms var(--ease-out), box-shadow 320ms var(--ease-out),
+                  color 320ms ease, filter 220ms ease;
+    }
+    html[data-pill="aurora"] .nav-pill:hover,
+    html[data-pill="aurora"] .section-tag:hover,
+    html[data-pill="aurora"] .icon-btn:hover,
+    html[data-pill="aurora"] .video-play:hover,
+    html[data-pill="aurora"] .info-btn:hover,
+    html[data-pill="aurora"] .customize-btn:hover,
+    html[data-pill="aurora"] .focus-btn:hover { background-position: 50% 55%; }
+
+    /* Aurora is solid, so it loses the hairline that only reads on glass. */
+    html[data-pill="aurora"] [data-theme="dark"] .nav-pill { border-color: rgba(255,255,255,0.18); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .nav-pill, .project-label, .project-arrow, .section-tag,
+      .customize-btn, .info-btn, .video-play, .icon-btn,
+      .mute-btn, .volume-wrap, .focus-btn { transition: none; }
+    }
+
+    /* Phones: the volume bar and the button row are ~110px and ~150px wide,
+       which collide below about 400px. Drop the slider — touch devices set
+       volume with the hardware keys anyway — and keep mute, which they can't
+       do from the outside. The rest of the controls shrink to match. */
+    @media (max-width: 700px) {
+      .volume-slider { display: none; }
+      .volume-wrap { padding: 5px 9px; gap: 0; }
+      .video-play { width: 54px; height: 54px; }
+      .video-play svg { width: 19px; height: 19px; }
+      .icon-btn { width: 34px; height: 34px; }   /* 34px ≈ the minimum comfortable tap target */
+      .icon-btn svg { width: 15px; height: 15px; }
+      .mute-btn { padding: 6px 12px 6px 9px; }
+      .video-actions { gap: 7px; bottom: 10px; right: 10px; }
+      .volume-wrap { bottom: 10px; left: 10px; }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .video-play { transition: none; }
     }
@@ -1942,7 +2349,7 @@
       bottom: 12px;
       right: 12px;
       background: var(--pill-bg, var(--nav-bg));
-      color: var(--nav-fg);
+      color: var(--pill-ink);
       backdrop-filter: blur(22px) saturate(1.6);
       -webkit-backdrop-filter: blur(22px) saturate(1.6);
       border: 1px solid rgba(0, 0, 0, 0.07);
@@ -1970,7 +2377,7 @@
       align-items: center;
       gap: 7px;
       background: var(--pill-bg, var(--nav-bg));
-      color: var(--nav-fg);
+      color: var(--pill-ink);
       backdrop-filter: blur(22px) saturate(1.6);
       -webkit-backdrop-filter: blur(22px) saturate(1.6);
       border: 1px solid rgba(0, 0, 0, 0.07);
@@ -1980,7 +2387,7 @@
       z-index: 10;
     }
 
-    .volume-wrap svg { width: 14px; height: 14px; color: var(--nav-fg); flex-shrink: 0; }
+    .volume-wrap svg { width: 14px; height: 14px; color: var(--pill-ink); flex-shrink: 0; }
 
     .volume-slider {
       -webkit-appearance: none;
@@ -2041,7 +2448,7 @@
       align-items: center;
       justify-content: center;
       background: var(--pill-bg, var(--nav-bg));
-      color: var(--nav-fg);
+      color: var(--pill-ink);
       backdrop-filter: blur(22px) saturate(1.6);
       -webkit-backdrop-filter: blur(22px) saturate(1.6);
       border: 1px solid rgba(0, 0, 0, 0.07);
@@ -2404,6 +2811,27 @@
 
 <body>
 
+  <!-- Refraction for the Liquid Glass pill style. Two chained displacement
+       passes (one per axis) fed by gradient maps: 128 = no shift, and the
+       stops bunch toward the edges so only the rim bends. Applied through
+       backdrop-filter, so it distorts the page behind the pill rather than
+       the pill itself. Progressive: browsers without url() backdrop filters
+       simply keep the blur and the rim highlights. -->
+  <svg width="0" height="0" aria-hidden="true" focusable="false"
+       style="position:absolute;pointer-events:none">
+    <defs>
+      <filter id="pill-lens" x="-15%" y="-15%" width="130%" height="130%"
+              color-interpolation-filters="sRGB">
+        <feImage result="mapX" preserveAspectRatio="none" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='60'><defs><linearGradient id='x' x1='0' y1='0' x2='1' y2='0'><stop offset='0' stop-color='rgb(255,128,128)'/><stop offset='0.14' stop-color='rgb(168,128,128)'/><stop offset='0.42' stop-color='rgb(132,128,128)'/><stop offset='0.58' stop-color='rgb(124,128,128)'/><stop offset='0.86' stop-color='rgb(88,128,128)'/><stop offset='1' stop-color='rgb(0,128,128)'/></linearGradient></defs><rect width='120' height='60' fill='url(%23x)'/></svg>"/>
+        <feImage result="mapY" preserveAspectRatio="none" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='60'><defs><linearGradient id='y' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='rgb(128,255,128)'/><stop offset='0.18' stop-color='rgb(128,170,128)'/><stop offset='0.45' stop-color='rgb(128,133,128)'/><stop offset='0.55' stop-color='rgb(128,123,128)'/><stop offset='0.82' stop-color='rgb(128,86,128)'/><stop offset='1' stop-color='rgb(128,0,128)'/></linearGradient></defs><rect width='120' height='60' fill='url(%23y)'/></svg>"/>
+        <feDisplacementMap in="SourceGraphic" in2="mapX" scale="9"
+                           xChannelSelector="R" yChannelSelector="B" result="dx"/>
+        <feDisplacementMap in="dx" in2="mapY" scale="7"
+                           xChannelSelector="B" yChannelSelector="G"/>
+      </filter>
+    </defs>
+  </svg>
+
   <a class="skip-link" href="#page-home">Skip to content</a>
 
   <!-- ══ INTRO SEQUENCE ══════════════════════════════════════════ -->
@@ -2496,7 +2924,7 @@
               <line x1="12" y1="16" x2="12" y2="12"/>
               <line x1="12" y1="8" x2="12.01" y2="8"/>
             </svg>
-            Technical Info
+            Website Info
           </button>
           <div class="info-panel" id="info-panel" hidden>
             <div class="info-section">
@@ -2519,7 +2947,7 @@
               <p class="info-label">Last Updated</p>
               <p class="info-text"><!--LAST_UPDATED-->Aug 16. 2026<!--/LAST_UPDATED--></p>
             </div>
-            <p class="info-version">v2.2</p>
+            <p class="info-version">v3.0</p>
           </div>
         </span>
 
@@ -2540,6 +2968,14 @@
             <div class="customize-row">
               <span class="customize-label">Pills</span>
               <input type="color" id="customize-nav-input" aria-label="Pill color">
+            </div>
+            <div class="customize-row customize-presets-row">
+              <span class="customize-label">Pill style</span>
+              <div class="customize-presets pill-styles">
+                <button class="pill-style" data-pill="glass"  aria-label="Glass, the default" title="Glass"></button>
+                <button class="pill-style" data-pill="liquid" aria-label="Liquid glass"       title="Liquid"></button>
+                <button class="pill-style" data-pill="aurora" aria-label="Aurora"             title="Aurora"></button>
+              </div>
             </div>
             <div class="customize-row customize-presets-row">
               <span class="customize-label">Presets</span>
@@ -2578,6 +3014,27 @@
          fixed, screen-sized frame the pile of images lives inside. -->
     <div class="archive-viewport" id="archive-viewport">
       <div class="archive-grid" id="archive-grid"></div>
+      <!-- Sandbox only. Filed images tuck between .folder-back and
+           .folder-front, so they read as being inside it rather than
+           stacked on top of it. -->
+      <div class="sandbox-folder" id="sandbox-folder" role="button" tabindex="0"
+           aria-label="Folder. Drag images in to collect them, drag out to take one back, press to empty.">
+        <!-- Both panels are stroked with a round linejoin rather than plain
+             filled: that rounds the corners *and* the angled tab, which
+             border-radius cannot do on a diagonal edge. -->
+        <svg class="folder-back" viewBox="0 0 120 96" aria-hidden="true">
+          <path d="M16 78 V24 H45 L55 34 H104 V78 Z"
+                stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
+        </svg>
+        <span class="folder-items" aria-hidden="true"></span>
+        <svg class="folder-front" viewBox="0 0 120 96" aria-hidden="true">
+          <path class="fld-seam" d="M16 78 V48 H104 V78 Z"
+                stroke-width="19" stroke-linejoin="round" stroke-linecap="round"/>
+          <path class="fld-face" d="M16 78 V48 H104 V78 Z"
+                stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
+        </svg>
+        <span class="folder-count" aria-hidden="true">0</span>
+      </div>
       <div class="sandbox-hint" aria-hidden="true">drag the images around</div>
     </div>
   </section>
@@ -2727,6 +3184,9 @@
 
       // Re-render archive fresh each visit so the layout is rebuilt correctly
       if (pageId === "archive") {
+        // Every arrival starts on Grid, however you got here.
+        archiveModePref = "masonry";
+        archiveMode     = "masonry";
         const intro = document.querySelector(".archive-intro");
         if (intro) intro.textContent = SITE.archiveIntro || "";
         const grid = document.getElementById("archive-grid");
@@ -2830,6 +3290,31 @@
      * All three take only (video, wrap), so they work on any video sitting
      * inside a .video-wrap — project page or lightbox alike.
      * ────────────────────────────────────────────────────────────── */
+    /* Native fullscreen. On phones this is far better than the lightbox: the
+       OS player fills the screen properly, handles rotation, and brings its
+       own transport controls and scrubber, which the inline UI has no room
+       for. iOS Safari only exposes it on the <video> element itself
+       (webkitEnterFullscreen); everywhere else the wrapper can go fullscreen,
+       which keeps our own controls visible inside it. */
+    function requestTrueFullscreen(video, wrap) {
+      try {
+        if (typeof video.webkitEnterFullscreen === "function") {
+          video.webkitEnterFullscreen();          // iPhone
+          return true;
+        }
+        const el = wrap || video;
+        if (el.requestFullscreen)            { el.requestFullscreen().catch(() => {}); return true; }
+        if (el.webkitRequestFullscreen)      { el.webkitRequestFullscreen();           return true; }
+        if (video.webkitSupportsFullscreen)  { video.webkitEnterFullscreen();          return true; }
+      } catch (e) {}
+      return false;
+    }
+
+    // Touch or narrow — the lightbox is cramped on a phone, native isn't.
+    function prefersNativeFullscreen() {
+      return window.matchMedia("(hover: none), (max-width: 700px)").matches;
+    }
+
     function addVideoActions(video, wrap, src, opts) {
       const iconReplay = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 9 8 9"/></svg>`;
       const iconExpand = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 9 4 4 9 4"/><polyline points="15 4 20 4 20 9"/><polyline points="20 15 20 20 15 20"/><polyline points="9 20 4 20 4 15"/></svg>`;
@@ -2857,6 +3342,12 @@
       // the button would only reopen what you're looking at.
       if (!opts || opts.fullscreen !== false) {
         make(iconExpand, "Open fullscreen", () => {
+          // On a phone go straight to the OS player; the lightbox can't give
+          // a scrubber or proper rotation handling at that size.
+          if (prefersNativeFullscreen()) {
+            video.muted = false;
+            if (requestTrueFullscreen(video, wrap)) { video.play().catch(() => {}); return; }
+          }
           // Hand over rather than play in two places at once.
           video.pause();
           // Resolved now, not when the row was built: the fallback renderer
@@ -3117,6 +3608,9 @@
         video.muted = true;
         video.loop = true;
         video.setAttribute("playsinline", "");
+        // Shown before the first press. Without it a sound video is a blank
+        // box until played, because it deliberately preloads nothing.
+        if (entry.poster) video.poster = entry.poster;
         setBox(video, entry.w, entry.h);
         if (eager) {
           video.setAttribute("preload", "metadata");
@@ -3854,22 +4348,21 @@
 
     /* ── Archive display modes ────────────────────────────────────────
      * "masonry" (default) · "sandbox" (pan/zoom plane) · "orbit" (ring)
-     * Remembered across visits, but never across a broken value.
+     * Not remembered across visits — see below.
      * ─────────────────────────────────────────────────────────────── */
     const ARCHIVE_MODES = ["masonry", "sandbox", "orbit"];
 
     /* Two values, deliberately. `archiveModePref` is what the visitor chose;
        `archiveMode` is what's actually running. They differ on phones, where
        the modes aren't offered — Sandbox needs a pointer to drag with and
-       Orbit needs hover, and neither exists on touch. Forcing masonry into
-       the live value while leaving the preference untouched means a desktop
-       choice survives a visit on a phone instead of being overwritten. */
+       Orbit needs hover, and neither exists on touch.
+
+       Neither is persisted. Grid is always where the archive starts: the other
+       modes are a way to play with the collection while you're in it, not a
+       setting to carry around, and arriving in Sandbox with no memory of
+       having chosen it is disorienting. showPage resets both on entry. */
     let archiveModePref = "masonry";
     let archiveMode     = "masonry";
-    try {
-      const saved = localStorage.getItem("archiveMode");
-      if (ARCHIVE_MODES.includes(saved)) archiveModePref = saved;
-    } catch (e) {}
 
     // Matches the 600px breakpoint that hides the centre nav pill.
     function modesAvailable() { return window.innerWidth > 600; }
@@ -4063,8 +4556,22 @@
         zone = { x0: hr.left - vr.left - PAD, y0: hr.top - vr.top - PAD,
                  x1: hr.right - vr.left + PAD, y1: hr.bottom - vr.top + PAD };
       }
+      // The folder is a drop target, so it can't start buried under the pile.
+      const fEl = vp.querySelector(".sandbox-folder");
+      let fzone = null;
+      if (fEl) {
+        const PAD = 18;
+        const vr2 = vp.getBoundingClientRect();
+        const fr = fEl.getBoundingClientRect();
+        if (fr.width) {
+          fzone = { x0: fr.left - vr2.left - PAD, y0: fr.top - vr2.top - PAD,
+                    x1: fr.right - vr2.left + PAD, y1: fr.bottom - vr2.top + PAD };
+        }
+      }
+      const hits = (z, x, y, w, h) =>
+        z && x < z.x1 && x + w > z.x0 && y < z.y1 && y + h > z.y0;
       const hitsZone = (x, y, w, h) =>
-        zone && x < zone.x1 && x + w > zone.x0 && y < zone.y1 && y + h > zone.y0;
+        hits(zone, x, y, w, h) || hits(fzone, x, y, w, h);
 
       /* Solve for the base width that makes the images cover COVER× the
          screen. Each image is base × f(i), so total area is
@@ -4083,6 +4590,7 @@
       const base  = Math.sqrt(COVER * planeW * planeH / denom);
 
       cells.forEach((cell, i) => {
+        if (cell.dataset.filed) return;   // it's in the folder
         const w = base * f[i];
         const h = w * ratio[i];
 
@@ -4115,7 +4623,15 @@
             y = -h * 0.15 + seededRand(i, seed + 3 + t * 17) * (planeH - h * 0.7);
             t++;
           } while (t < 24 && hitsZone(x, y, w, h));
-          if (hitsZone(x, y, w, h)) y = Math.min(y, zone.y0 - h);
+          if (hitsZone(x, y, w, h)) {
+            // Re-rolling failed. Lift it clear above whichever zone it lands
+            // on — the earlier version only ever cleared the hint, so a piece
+            // could still come to rest on top of the folder.
+            const tops = [];
+            if (hits(zone,  x, y, w, h)) tops.push(zone.y0);
+            if (hits(fzone, x, y, w, h)) tops.push(fzone.y0);
+            if (tops.length) y = Math.min(y, Math.min.apply(null, tops) - h);
+          }
           cell.dataset.sx = x;
           cell.dataset.sy = y;
         }
@@ -4130,6 +4646,168 @@
         cell.style.setProperty("--scl", scl.toFixed(3));
         if (!cell.style.zIndex) cell.style.zIndex = String(1 + (i % 7));
       });
+
+      seedFolder();
+    }
+
+    /* ── The folder ───────────────────────────────────────────────────
+       Filed images are hidden from the pile and represented by a thumbnail
+       tucked between the folder's panels. The cell itself is kept (not
+       destroyed) and flagged, so filing is reversible and the layout knows
+       to skip it. Capped display, because 51 slivers would be mush. */
+    const FOLDER_MAX_VISIBLE = 4;   // just a few peeking over the fold
+    let folderSeq = 0;              // filing order, which array order is not
+
+    function folderEl() { return document.getElementById("sandbox-folder"); }
+
+    function isOverFolder(x, y) {
+      const f = folderEl();
+      if (!f || getComputedStyle(f).display === "none") return false;
+      const r = f.getBoundingClientRect();
+      return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+    }
+
+    /* Start with a handful already collected, so the folder reads as part of
+       the piece rather than an empty widget waiting to be discovered.
+       Images only — videos contribute no thumbnail, so seeding with them
+       would show a count against an empty folder. */
+    let folderSeeded = false;
+
+    function seedFolder() {
+      if (folderSeeded) return;
+      const pool = archiveCells.filter(c => c.dataset.kind !== "video" && !c.dataset.filed);
+      if (pool.length < 5) return;          // not enough loaded yet; try again next layout
+      folderSeeded = true;
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      const n = 5 + Math.floor(Math.random() * 11);   // 5–15
+      pool.slice(0, n).forEach(c => {
+        c.dataset.filed = "1";
+        c.dataset.filedAt = String(++folderSeq);
+        c.classList.add("is-filed");
+      });
+      // One rebuild rather than n calls to fileIntoFolder — that would fire
+      // the squash animation a dozen times over on arrival.
+      syncFolderItems();
+    }
+
+    /* Six archive entries are .mp4, and an <img> can't decode those — it
+       renders a broken-image placeholder. Videos are still filed and counted,
+       they simply don't contribute a thumbnail. */
+    function folderThumb(cell) {
+      if (cell.dataset.kind === "video") return null;
+      const img = document.createElement("img");
+      img.alt = "";
+      img.dataset.src = cell.dataset.src;
+      // If anything else fails to decode, drop it rather than showing a
+      // broken icon inside the folder.
+      img.addEventListener("error", () => img.remove(), { once: true });
+      img.src = cell.dataset.src;
+      return img;
+    }
+
+    /* Rebuilds the fan from the filed set. Declarative on purpose: skipping
+       videos made the previous incremental index arithmetic fragile — this
+       just states what should be showing. Only the newly filed thumb
+       animates, so the rest don't flicker on every change. */
+    function syncFolderItems(animateSrc) {
+      const f = folderEl();
+      if (!f) return;
+      const items = f.querySelector(".folder-items");
+      const filed = filedInOrder();
+      const want  = filed.filter(c => c.dataset.kind !== "video").slice(-FOLDER_MAX_VISIBLE);
+
+      const wantSrcs = want.map(c => c.dataset.src).join("|");
+      const haveSrcs = [...items.children].map(el => el.dataset.src).join("|");
+      if (wantSrcs !== haveSrcs) {
+        items.innerHTML = "";
+        want.forEach(c => {
+          const t = folderThumb(c);
+          if (!t) return;
+          if (c.dataset.src !== animateSrc) t.style.animation = "none";
+          items.appendChild(t);
+        });
+      }
+      layoutFolderItems();
+      f.querySelector(".folder-count").textContent = filed.length;
+      f.classList.toggle("has-items", filed.length > 0);
+    }
+
+    function fileIntoFolder(cell) {
+      const f = folderEl();
+      if (!f || cell.dataset.filed) return;
+      cell.dataset.filed = "1";
+      cell.dataset.filedAt = String(++folderSeq);
+      cell.classList.add("is-filed");
+      syncFolderItems(cell.dataset.src);
+      f.classList.remove("just-filed");
+      void f.offsetWidth;            // restart the squash
+      f.classList.add("just-filed");
+    }
+
+    function layoutFolderItems() {
+      const f = folderEl();
+      if (!f) return;
+      const items = [...f.querySelector(".folder-items").children];
+      const track = f.querySelector(".folder-items").getBoundingClientRect().width;
+      const span = Math.max(0, track - 30);   // track width minus one thumb
+      items.forEach((el, i) => {
+        const t = items.length === 1 ? 0.5 : i / (items.length - 1);
+        el.style.left = (t * span) + "px";
+        // Each sits a touch higher than the last, so the stack visibly grows.
+        el.style.bottom = (i * 1.5) + "px";
+        el.style.transform = "rotate(" + ((t - 0.5) * 9).toFixed(1) + "deg)";
+      });
+    }
+
+    /* Filed cells, oldest first. archiveCells is in FILE-NUMBER order, so
+       filtering it gives the wrong sequence — pulling from the end handed
+       back whatever had the highest number rather than what was just put in.
+       filedAt records the actual order. */
+    function filedInOrder() {
+      return archiveCells
+        .filter(c => c.dataset.filed)
+        .sort((a, b) => (+a.dataset.filedAt || 0) - (+b.dataset.filedAt || 0));
+    }
+
+    /* Pull the most recently filed image back out and hand it to the caller
+       so it can be dragged. Last-in-first-out matches what you see. */
+    function unfileTop() {
+      const filed = filedInOrder();
+      if (!filed.length) return null;
+      const cell = filed[filed.length - 1];
+      delete cell.dataset.filed;
+      delete cell.dataset.filedAt;
+      cell.classList.remove("is-filed");
+      syncFolderItems();
+      return cell;
+    }
+
+    function emptyFolder() {
+      const f = folderEl();
+      if (!f) return;
+      archiveCells.forEach(c => {
+        if (!c.dataset.filed) return;
+        delete c.dataset.filed;
+        delete c.dataset.filedAt;
+        c.classList.remove("is-filed");
+      });
+      syncFolderItems();
+      archiveLayout();               // give them positions again
+    }
+
+    function initFolder() {
+      const f = folderEl();
+      if (!f || f.dataset.bound) return;
+      f.dataset.bound = "1";
+      // No click handler: the pointer path already decides between "pull one
+      // out" and "empty", and a click listener here would fire on top of it.
+      // Keyboard still needs its own route in.
+      f.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); emptyFolder(); }
+      });
     }
 
     /* Per-image dragging. Bound once; only active while the viewport carries
@@ -4141,10 +4819,27 @@
 
       let dragging = false, moved = 0, lastX = 0, lastY = 0, pid = null;
       let heldCell = null;                 // the image being dragged, if any
+      let pullArmed = false;               // press began on the folder
       const active = () => vp.classList.contains("is-sandbox");
 
       vp.addEventListener("pointerdown", e => {
         if (!active() || e.button !== 0) return;
+
+        /* Pressing the folder could mean two things: drag one back out, or
+           click to empty. Both start identically, so commit to neither yet —
+           arm it here and let the 6px movement threshold decide, the same
+           way a drag is told apart from a click everywhere else. */
+        const onFolder = e.target.closest(".sandbox-folder");
+        if (onFolder) {
+          pullArmed = true;
+          dragging = true; moved = 0;
+          lastX = e.clientX; lastY = e.clientY;
+          pid = e.pointerId;
+          vp.setPointerCapture(pid);
+          e.preventDefault();
+          return;
+        }
+
         // Only images are draggable — there's no plane to pan.
         heldCell = e.target.closest(".archive-img");
         if (!heldCell) return;
@@ -4159,10 +4854,29 @@
       });
 
       vp.addEventListener("pointermove", e => {
-        if (!dragging || !heldCell || e.pointerId !== pid) return;
+        if (!dragging || e.pointerId !== pid) return;
         const dx = e.clientX - lastX, dy = e.clientY - lastY;
         lastX = e.clientX; lastY = e.clientY;
         moved += Math.abs(dx) + Math.abs(dy);
+
+        // Armed on the folder and now actually moving — pull the top one out
+        // and drop it under the cursor so it follows straight away.
+        if (pullArmed && !heldCell && moved > 6) {
+          const cell = unfileTop();
+          if (!cell) { pullArmed = false; dragging = false; return; }
+          heldCell = cell;
+          pullArmed = false;
+          const vr = vp.getBoundingClientRect();
+          const w = cell.getBoundingClientRect().width || 160;
+          const h = cell.getBoundingClientRect().height || 120;
+          const nx = e.clientX - vr.left - w / 2;
+          const ny = e.clientY - vr.top  - h / 2;
+          cell.dataset.sx = nx; cell.dataset.sy = ny;
+          cell.style.left = nx + "px"; cell.style.top = ny + "px";
+          cell.classList.add("is-dragging");
+          cell.style.zIndex = String(++sandboxTopZ);
+        }
+        if (!heldCell) return;
 
         const nx = parseFloat(heldCell.dataset.sx || 0) + dx;
         const ny = parseFloat(heldCell.dataset.sy || 0) + dy;
@@ -4170,12 +4884,24 @@
         heldCell.dataset.sy = ny;
         heldCell.style.left = nx + "px";
         heldCell.style.top  = ny + "px";
+        const overF = folderEl();
+        if (overF) overF.classList.toggle("is-target", isOverFolder(e.clientX, e.clientY));
       });
 
       function endDrag(e) {
         if (!dragging || (pid !== null && e.pointerId !== pid)) return;
         dragging = false;
-        if (heldCell) { heldCell.classList.remove("is-dragging"); heldCell = null; }
+        const f = folderEl();
+        if (f) f.classList.remove("is-target");
+        if (pullArmed) { pullArmed = false; if (moved <= 6) emptyFolder(); }
+        if (heldCell) {
+          heldCell.classList.remove("is-dragging");
+          // Released over the folder? File it away. The 6px guard is the same
+          // one that separates a drag from a click, so a stray tap on a piece
+          // sitting near the folder can't swallow it.
+          if (moved > 6 && isOverFolder(e.clientX, e.clientY)) fileIntoFolder(heldCell);
+          heldCell = null;
+        }
         if (pid !== null && vp.hasPointerCapture(pid)) vp.releasePointerCapture(pid);
         pid = null;
       }
@@ -4463,6 +5189,10 @@
     // Label widths shift when the webfont swaps in or the window resizes;
     // re-measure so the marker never drifts off its label.
     window.addEventListener("resize", () => positionModeThumb(false));
+    // Same reason for the folder's fan: it's positioned from the measured
+    // track width, so a resize would otherwise leave the thumbs spread for
+    // the previous size and hanging outside the folder.
+    window.addEventListener("resize", () => layoutFolderItems());
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(() => positionModeThumb(false));
     }
@@ -4473,7 +5203,6 @@
 
       if (mode && ARCHIVE_MODES.includes(mode)) {
         archiveModePref = mode;
-        try { localStorage.setItem("archiveMode", mode); } catch (e) {}
       }
       // What actually runs may differ from the preference on a narrow screen.
       const next     = effectiveMode();
@@ -4529,6 +5258,7 @@
         });
       } else {
         initSandboxControls();
+        initFolder();
       }
       if (archiveMode === "orbit") initOrbitControls();
       else {
@@ -4646,6 +5376,7 @@
     function renderArchive() {
       const grid = document.getElementById("archive-grid");
       archiveCells = [];
+      folderSeeded = false;   // a fresh set of cells gets a fresh seeding
       if (grid) grid.classList.remove("layout-settled");
       const gen = ++archiveGen;
 
@@ -5174,10 +5905,54 @@
     }
     function inkFor(hex) { return relativeLuminance(hex) > 0.5 ? "#0a0a0a" : "#efefef"; }
 
+    /* The pill surface is deliberately independent of custom mode: it's a
+       material choice, not a colour scheme, so it survives in light and dark
+       too. "glass" is the default and stores no attribute. */
+    function applyPillStyle() {
+      const root = document.documentElement;
+      const stored = getCustomColors();
+      // "candy" was removed; anything unrecognised falls back to the default.
+      const VALID = ["glass", "liquid", "aurora"];
+      const want = VALID.includes(stored.pill) ? stored.pill : "glass";
+      if (want === "glass") root.removeAttribute("data-pill");
+      else root.setAttribute("data-pill", want);
+
+      ["--pill-ink", "--pill-marker", "--pill-marker-ink"].forEach(v => root.style.removeProperty(v));
+
+      /* Ink is derived from the surface rather than fixed, because the surface
+         now follows the chosen pill colour. Judging it from the raw colour
+         would be wrong: aurora's radial mixes heavily toward white, so the
+         surface stays light and wants dark ink even at full saturation. */
+      if (want === "aurora") {
+        const base = stored.nav ||
+          getComputedStyle(root).getPropertyValue("--pill-solid").trim() || "#e7e9ee";
+        const hex = /^#[0-9a-f]{6}$/i.test(base) ? base : "#e7e9ee";
+        // Aurora's radial mixes heavily toward white, so the surface stays
+        // light and wants dark ink even at full saturation.
+        const surface = mixHex(hex, "#ffffff", 0.55);
+        const ink = inkFor(surface);
+        root.style.setProperty("--pill-ink", ink);
+        root.style.setProperty("--pill-marker", ink);
+        root.style.setProperty("--pill-marker-ink", inkFor(ink));
+      }
+
+      document.querySelectorAll(".pill-style").forEach(b =>
+        b.classList.toggle("active", b.getAttribute("data-pill") === want));
+    }
+
+    // Blend two hex colours; t = how far toward `b`.
+    function mixHex(a, b, t) {
+      const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+      const [r1, g1, b1] = p(a), [r2, g2, b2] = p(b);
+      const c = (x, y) => Math.round(x + (y - x) * t).toString(16).padStart(2, "0");
+      return "#" + c(r1, r2) + c(g1, g2) + c(b1, b2);
+    }
+
     function applyCustomColors() {
       const root = document.documentElement;
       // Always clear inline overrides first — they only belong in custom mode.
-      ["--bg","--fg","--nav-bg","--pill-bg","--nav-fg","--tag-bg","--tag-fg","--tag-border","--font"]
+      // NB: the pill surface is NOT reset here; it isn't a colour setting.
+      ["--bg","--fg","--nav-bg","--pill-bg","--pill-solid","--nav-fg","--tag-bg","--tag-fg","--tag-border","--font"]
         .forEach(p => root.style.removeProperty(p));
       if (root.getAttribute("data-theme") !== "custom") return;
       const stored = getCustomColors();
@@ -5191,6 +5966,7 @@
         const navInk = inkFor(stored.nav);
         root.style.setProperty("--nav-bg", hexToRgba(stored.nav, 0.88));
           root.style.setProperty("--pill-bg", hexToRgba(stored.nav, 0.62));
+        root.style.setProperty("--pill-solid", stored.nav);
         root.style.setProperty("--nav-fg", navInk);
         root.style.setProperty("--tag-bg", stored.nav);
         root.style.setProperty("--tag-fg", navInk);
@@ -5320,6 +6096,17 @@
           data.nav = p.getAttribute("data-nav");
           try { localStorage.setItem("customColors", JSON.stringify(data)); } catch (e) {}
           applyCustomColors();
+          applyPillStyle();   // the surface follows the colour, so re-derive the ink
+        });
+      });
+
+      // Pill surface — independent of the colour presets
+      panel.querySelectorAll(".pill-style").forEach(b => {
+        b.addEventListener("click", () => {
+          const data = getCustomColors();
+          data.pill = b.getAttribute("data-pill");
+          try { localStorage.setItem("customColors", JSON.stringify(data)); } catch (e) {}
+          applyPillStyle();
         });
       });
 
@@ -5330,11 +6117,13 @@
           data.font = p.getAttribute("data-font");
           try { localStorage.setItem("customColors", JSON.stringify(data)); } catch (e) {}
           applyCustomColors();
+          applyPillStyle();   // the surface follows the colour, so re-derive the ink
         });
       });
 
       // If we loaded already in custom mode, sync the inputs
       applyCustomColors();
+      applyPillStyle();
     })();
 
     /* ── Info panel toggle ───────────────────────────────────────── */
