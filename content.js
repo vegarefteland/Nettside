@@ -30,22 +30,14 @@ const SITE = {
         "Designing retro inspired formula 1 merch for every team on the grid.",
     },
     {
-      title: "Arboretet – Visual Identity",
+       title: "Arboretet – Visual Identity",
       folder: "02",
       cover: "images/projects/02/cover.mp4",
-      color: "#1C1C1E",
+      color: "#E8E0D5",
       wip: false,
       year: "2026",
       description:
-        "<strong>Student Project in collaboration with:</strong>\n\n" +
-        "Dorthea Førland Solem<br>" +
-        "Olga Nørager-Nielsen<br>" +
-        "Sofiia Kundriutskova\n\n" +
-        "<strong>Client:</strong>\n" +
-        "Arboretet i Bergen is a botanical garden located at Milde, just south of Bergen, Norway. Spanning over 300 acres, it houses one of the largest collections of trees, shrubs, and plants in Scandinavia.\n\n" +
-        "<strong>Concept:</strong>\n" +
-"Over six weeks, the project moved through market positioning research, analysis of long-term ambitions and values, target audience mapping, concept development, design strategy, and the final visual identity itself.\n\n" +
-        "The concept explores how one can control the uncontrollable. By this we mean finding systems within chaos and exploring how chaos can be used as an effect to spark curiosity. Controlling the uncontrollable plays on how the plants at \"Arboretet\" are wild, yet do not grow naturally in the area. \"Arboretet\" is a curated, living museum even though it does not appear that way at first glance.",
+        "<strong>Student Project in collaboration with:</strong>\n\nDorthea Førland Solem<br>Olga Nørager-Nielsen<br>Sofiia Kundriutskova\n\n\n<strong>Client:</strong><br>Arboretet i Bergen is a botanical garden located at Milde, just south of Bergen, Norway. Spanning over 300 acres, it houses one of the largest collections of trees, shrubs, and plants in Scandinavia.\n\n\n<strong>Concept:</strong><br>Over six weeks, the project moved through market positioning research, analysis of long-term ambitions and values, target audience mapping, concept development, design strategy, and the final visual identity itself.\n\nThe concept explores how one can control the uncontrollable. By this we mean finding systems within chaos and exploring how chaos can be used as an effect to spark curiosity. Controlling the uncontrollable plays on how the plants at \"Arboretet\" are wild, yet do not grow naturally in the area. \"Arboretet\" is a curated, living museum even though it does not appear that way at first glance.",
     },
     {
       title: "Poster Design",
@@ -70,16 +62,15 @@ const SITE = {
         "Built around physical buttons and knobs, materials include sandblasted steel with a matte finish.\n\n" +
         "Modeled and rendered in Blender.",
     },
-    {
-      title: "Motion Graphics",
+         {
+      title: "Motion Graphics & Animation",
       folder: "05",
-      cover: "images/projects/05/cover.webp",
-      color: "#D4C5B0",
+      cover: "images/projects/05/cover.mp4",
+      color: "#E8E0D5",
       wip: false,
-      year: "2026",
+      year: "2025–2026",
       description:
-        "Promotional showcase video highlighting motion and design work.\n\n" +
-        "Created in After Effects and Premiere Pro.",
+        "Selection of motion and animation projects, made in school and personal work contexts.\n\n\n<strong>(01) Showreel</strong>\n\nPromotional video showcasing motion and design work.\n\nTools Used: After Effects, Premiere Pro & Photoshop\n\n\n<strong>(02) Animation Course — Group Project</strong>\n\nSelected scene of my part in a group final assignment.\n\nIn collaboration with Jonathan Kindingstad & Elias Olai Skog\n\nTools used: After Effects, Premiere Pro, Photoshop & InDesign",
     },
     {
       title: "Personal Branding",

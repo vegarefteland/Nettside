@@ -22,7 +22,7 @@
        list of which images exist, that shows the old set: new pictures
        missing, deleted ones still there. Must match the fetch below exactly,
        or the preload is thrown away and the file is fetched twice. -->
-  <link rel="preload" as="fetch" href="images/manifest.json?v=20260816144803" crossorigin>
+  <link rel="preload" as="fetch" href="images/manifest.json?v=20260816164017" crossorigin>
   <link rel="preload" as="image" href="images/projects/01/cover.webp" fetchpriority="high">
   <link rel="preload" as="image" href="images/projects/03/cover.webp" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -139,7 +139,7 @@
     // The version below is rewritten on every commit by the pre-commit hook;
     // keep it identical to the preload href in <head> or the browser treats
     // them as two different files and downloads it twice.
-    var MANIFEST_V = "20260816144803";
+    var MANIFEST_V = "20260816164017";
     window.__manifest = fetch("images/manifest.json?v=" + MANIFEST_V)
       .then(r => r.ok ? r.json() : null)
       .catch(() => null);
@@ -1818,17 +1818,136 @@
       width: 100%;
       background: transparent;
     }
+    /* In the lightbox the video is capped by max-width/max-height, so the
+       wrapper has to shrink to it — at the inherited width:100% the controls
+       would anchor to the edges of a full-width box instead of the picture. */
+    #lightbox-video-wrap {
+      width: fit-content;
+      max-width: 100%;
+      margin: 0 auto;
+      line-height: 0;   /* no inline-descender gap under the video */
+    }
+
+    /* ── Centre play/pause, for *_player.mp4 only ────────────────────
+       These carry sound, so they load paused rather than autoplaying — the
+       big centre control is what says "this one is yours to start".
+       Same glass as every other pill on the site.
+
+       Visible whenever the video is paused. Once playing it fades out and
+       comes back on hover, so it never sits over the work while you watch. */
+    .video-play {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(1);
+      width: 64px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--pill-bg, var(--nav-bg));
+      color: var(--nav-fg);
+      backdrop-filter: blur(22px) saturate(1.6);
+      -webkit-backdrop-filter: blur(22px) saturate(1.6);
+      border: 1px solid rgba(0, 0, 0, 0.07);
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      border-radius: 50%;
+      cursor: pointer;
+      padding: 0;
+      z-index: 3;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 260ms var(--ease-out), transform 260ms var(--ease-out);
+    }
+    .video-play svg { width: 22px; height: 22px; display: block; }
+    /* The triangle is drawn symmetrically about the box centre, so this is the
+       only horizontal offset: a small optical nudge, because a right-pointing
+       shape carries its visual weight to the left and reads off-centre when
+       it's geometrically centred. ~1px on a 12px-wide mark is the usual
+       correction — the earlier 3px margin sat on top of geometry that was
+       already 1px right, putting the icon 4px off. */
+    .video-play[data-state="paused"] svg { transform: translateX(0.9px); }
+
+    /* Bottom-right cluster: replay · fullscreen · sound. A flex row rather
+       than three absolutely-positioned buttons, because the sound button
+       changes width as its label flips between "Sound" and "Mute" — fixed
+       offsets would drift every time it was pressed. */
+    .video-actions {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      z-index: 10;
+    }
+    .video-actions .mute-btn {
+      position: static;   /* the row places it now */
+      bottom: auto;
+      right: auto;
+    }
+
+    .icon-btn {
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      background: var(--pill-bg, var(--nav-bg));
+      color: var(--nav-fg);
+      backdrop-filter: blur(22px) saturate(1.6);
+      -webkit-backdrop-filter: blur(22px) saturate(1.6);
+      border: 1px solid rgba(0, 0, 0, 0.07);
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+      border-radius: 50%;
+      cursor: pointer;
+      transition: opacity 180ms ease, transform 180ms var(--ease-out);
+    }
+    .icon-btn svg { width: 14px; height: 14px; display: block; }
+    .icon-btn:hover { opacity: 0.75; }
+    .icon-btn:active { transform: scale(0.94); }
+    [data-theme="dark"] .icon-btn { border-color: rgba(255, 255, 255, 0.07); }
+
+    /* Volume bar and the action row hide and show with the play control, so
+       the video is left completely clear while it runs. */
+    .video-wrap .video-actions,
+    .video-wrap .volume-wrap {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 260ms var(--ease-out);
+    }
+    .video-wrap.controls-visible .video-play,
+    .video-wrap.controls-visible .video-actions,
+    .video-wrap.controls-visible .volume-wrap,
+    .video-wrap:hover .video-play,
+    .video-wrap:hover .video-actions,
+    .video-wrap:hover .volume-wrap {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .video-play:hover { transform: translate(-50%, -50%) scale(1.06); }
+    .video-play:active { transform: translate(-50%, -50%) scale(0.97); }
+
+    [data-theme="dark"] .video-play,
+    [data-theme="dark"] .mute-btn,
+    [data-theme="dark"] .volume-wrap { border-color: rgba(255, 255, 255, 0.07); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .video-play { transition: none; }
+    }
 
     .mute-btn {
       position: absolute;
       bottom: 12px;
       right: 12px;
-      background: rgba(0, 0, 0, 0.55);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      border: none;
+      background: var(--pill-bg, var(--nav-bg));
+      color: var(--nav-fg);
+      backdrop-filter: blur(22px) saturate(1.6);
+      -webkit-backdrop-filter: blur(22px) saturate(1.6);
+      border: 1px solid rgba(0, 0, 0, 0.07);
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
       border-radius: 100px;
-      color: #fff;
       font-size: 12.5px;
       font-family: var(--font);
       font-weight: 400;
@@ -1840,7 +1959,7 @@
       transition: background 180ms ease;
       z-index: 10;
     }
-    .mute-btn:hover { background: rgba(0, 0, 0, 0.75); }
+    .mute-btn:hover { opacity: 0.75; }
     .mute-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
 
     .volume-wrap {
@@ -1850,15 +1969,18 @@
       display: flex;
       align-items: center;
       gap: 7px;
-      background: rgba(0, 0, 0, 0.55);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      background: var(--pill-bg, var(--nav-bg));
+      color: var(--nav-fg);
+      backdrop-filter: blur(22px) saturate(1.6);
+      -webkit-backdrop-filter: blur(22px) saturate(1.6);
+      border: 1px solid rgba(0, 0, 0, 0.07);
+      box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
       border-radius: 100px;
       padding: 5px 11px;
       z-index: 10;
     }
 
-    .volume-wrap svg { width: 14px; height: 14px; color: #fff; flex-shrink: 0; }
+    .volume-wrap svg { width: 14px; height: 14px; color: var(--nav-fg); flex-shrink: 0; }
 
     .volume-slider {
       -webkit-appearance: none;
@@ -1866,7 +1988,8 @@
       width: 70px;
       height: 3px;
       border-radius: 2px;
-      background: rgba(255,255,255,0.35);
+      background: rgba(128, 128, 128, 0.4);   /* fallback if color-mix is unsupported */
+      background: color-mix(in srgb, var(--nav-fg) 28%, transparent);
       outline: none;
       cursor: pointer;
     }
@@ -1876,14 +1999,14 @@
       width: 12px;
       height: 12px;
       border-radius: 50%;
-      background: #fff;
+      background: var(--nav-fg);
       cursor: pointer;
     }
     .volume-slider::-moz-range-thumb {
       width: 12px;
       height: 12px;
       border-radius: 50%;
-      background: #fff;
+      background: var(--nav-fg);
       border: none;
       cursor: pointer;
     }
@@ -2491,7 +2614,10 @@
     </button>
     <div id="lightbox-wrap">
       <img id="lightbox-img" src="" alt="" style="display:none">
-      <video id="lightbox-video" src="" autoplay loop muted playsinline style="display:none"></video>
+      <!-- .video-wrap so the shared player controls position against it -->
+      <div class="video-wrap" id="lightbox-video-wrap" style="display:none">
+        <video id="lightbox-video" src="" autoplay loop muted playsinline></video>
+      </div>
       <div id="lightbox-color" style="display:none; width:min(90vw,600px); height:min(90vw,600px); border-radius:6px;"></div>
     </div>
   </div>
@@ -2698,6 +2824,139 @@
     if ("scrollRestoration" in history) history.scrollRestoration = "manual";
     window.addEventListener("popstate", restoreFromPath);
 
+    /* ── Shared video player controls ────────────────────────────────
+     * Top level rather than inside renderProjectPage, because the
+     * lightbox needs the same controls and can't reach into that scope.
+     * All three take only (video, wrap), so they work on any video sitting
+     * inside a .video-wrap — project page or lightbox alike.
+     * ────────────────────────────────────────────────────────────── */
+    function addVideoActions(video, wrap, src, opts) {
+      const iconReplay = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 4 3 9 8 9"/></svg>`;
+      const iconExpand = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 9 4 4 9 4"/><polyline points="15 4 20 4 20 9"/><polyline points="20 15 20 20 15 20"/><polyline points="9 20 4 20 4 15"/></svg>`;
+
+      const row = document.createElement("div");
+      row.className = "video-actions";
+
+      function make(icon, label, onClick) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "icon-btn";
+        b.innerHTML = icon;
+        b.setAttribute("aria-label", label);
+        b.addEventListener("click", e => { e.stopPropagation(); onClick(); });
+        row.appendChild(b);
+        return b;
+      }
+
+      make(iconReplay, "Replay from the start", () => {
+        video.currentTime = 0;
+        video.play().catch(() => {});
+      });
+
+      // Skipped inside the lightbox — that already *is* the expanded view, so
+      // the button would only reopen what you're looking at.
+      if (!opts || opts.fullscreen !== false) {
+        make(iconExpand, "Open fullscreen", () => {
+          // Hand over rather than play in two places at once.
+          video.pause();
+          // Resolved now, not when the row was built: the fallback renderer
+          // swaps video.src while probing for _player.mp4, so a URL captured
+          // at build time can be the wrong one.
+          openLightbox(src || video.currentSrc || video.src, "#1a1a1a");
+        });
+      }
+
+      wrap.appendChild(row);
+      return row;
+    }
+
+    /* Big centre play/pause for *_player.mp4. Shared by both render paths
+       so the two can't drift apart. Owns nothing but the button — the
+       volume bar below is built separately. */
+    function addCentrePlay(video, wrap) {
+      const play  = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"><polygon points="7.5 6.5 16.5 12 7.5 17.5"/></svg>`;
+      const pause = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4.5" width="4.2" height="15" rx="2.1"/><rect x="13.8" y="4.5" width="4.2" height="15" rx="2.1"/></svg>`;
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "video-play";
+
+      function sync() {
+        const paused = video.paused;
+        btn.innerHTML = paused ? play : pause;
+        btn.dataset.state = paused ? "paused" : "playing";
+        btn.setAttribute("aria-label", paused ? "Play video" : "Pause video");
+        // Pinned open while paused; while playing they're hover-only, so
+        // nothing sits on top of the thing you're trying to watch. Set on
+        // the wrapper so the volume controls follow the same state.
+        wrap.classList.toggle("controls-visible", paused);
+      }
+
+      btn.addEventListener("click", e => {
+        e.stopPropagation();
+        if (video.paused) video.play().catch(() => {});
+        else video.pause();
+      });
+
+      // Driven by the video's own events, not by the click — so it stays
+      // honest if playback is stopped by anything else (ended, or the
+      // browser refusing to start it).
+      ["play", "pause", "ended"].forEach(ev => video.addEventListener(ev, sync));
+      sync();
+
+      wrap.appendChild(btn);
+      return btn;
+    }
+
+    // Full audio controls, used only for *_player.mp4 (entry.sound)
+    function mfVideoControls(video, wrap, src, opts) {
+      const iconMuted = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>`;
+      const iconSound = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`;
+
+      const muteBtn = document.createElement("button");
+      muteBtn.className = "mute-btn";
+      muteBtn.setAttribute("aria-label", "Unmute");
+      muteBtn.innerHTML = iconMuted + "Sound";
+
+      const volWrap = document.createElement("div");
+      volWrap.className = "volume-wrap";
+
+      const volIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      volIcon.setAttribute("viewBox", "0 0 24 24");
+      volIcon.setAttribute("fill", "none");
+      volIcon.setAttribute("stroke", "currentColor");
+      volIcon.setAttribute("stroke-width", "2");
+      volIcon.setAttribute("stroke-linecap", "round");
+      volIcon.setAttribute("stroke-linejoin", "round");
+      volIcon.innerHTML = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>`;
+      volWrap.appendChild(volIcon);
+
+      const slider = document.createElement("input");
+      slider.type = "range";
+      slider.className = "volume-slider";
+      slider.min = 0; slider.max = 1; slider.step = 0.01; slider.value = 0;
+      slider.setAttribute("aria-label", "Volume");
+      slider.addEventListener("input", () => {
+        const v = parseFloat(slider.value);
+        video.volume = v;
+        video.muted = v === 0;
+        muteBtn.innerHTML = video.muted ? iconMuted + "Sound" : iconSound + "Mute";
+        muteBtn.setAttribute("aria-label", video.muted ? "Unmute" : "Mute");
+      });
+      volWrap.appendChild(slider);
+
+      muteBtn.addEventListener("click", () => {
+        video.muted = !video.muted;
+        muteBtn.innerHTML = video.muted ? iconMuted + "Sound" : iconSound + "Mute";
+        muteBtn.setAttribute("aria-label", video.muted ? "Unmute" : "Mute");
+        slider.value = video.muted ? 0 : 1;
+      });
+
+      wrap.appendChild(volWrap);
+      // Sound sits at the right-hand end of the row: replay · fullscreen · sound
+      addVideoActions(video, wrap, src, opts).appendChild(muteBtn);
+    }
+
     function renderProjectPage(project) {
       const page = document.getElementById("page-project");
 
@@ -2744,12 +3003,16 @@
         return;
       }
 
-      // Build description paragraphs
-      const paragraphs = project.description
-        .split("\n")
-        .filter(p => p.trim())
-        .map(p => `<p>${p}</p>`)
-        .join("");
+      // Build description paragraphs. One blank line = normal paragraph
+      // break; two or more blank lines = a section divider (chapter break).
+      let paragraphs = "";
+      let blankRun = 0;
+      for (const line of project.description.split("\n")) {
+        if (!line.trim()) { blankRun++; continue; }
+        if (blankRun > 1) paragraphs += `<hr class="desc-divider">`;
+        paragraphs += `<p>${line}</p>`;
+        blankRun = 0;
+      }
 
       // Optional year pill (e.g. "2024", "2022–2026", "Ongoing").
       // Rendered only if `year` is set on the project in content.js.
@@ -2848,7 +3111,9 @@
 
       function mfVideo(entry, eager) {
         const video = document.createElement("video");
-        video.autoplay = true;
+        // *_player.mp4 carries sound, so it waits for a deliberate press.
+        // Silent clips still autoplay as decorative motion.
+        video.autoplay = !entry.sound;
         video.muted = true;
         video.loop = true;
         video.setAttribute("playsinline", "");
@@ -2864,66 +3129,9 @@
         return video;
       }
 
-      // Full audio controls, used only for *_player.mp4 (entry.sound)
-      function mfVideoControls(video, wrap) {
-        const iconMuted = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>`;
-        const iconSound = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`;
-        const iconPlay  = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
-        const iconPause = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
-
-        const muteBtn = document.createElement("button");
-        muteBtn.className = "mute-btn";
-        muteBtn.setAttribute("aria-label", "Unmute");
-        muteBtn.innerHTML = iconMuted + "Sound";
-
-        const volWrap = document.createElement("div");
-        volWrap.className = "volume-wrap";
-
-        const playBtn = document.createElement("button");
-        playBtn.className = "mute-btn";
-        playBtn.style.cssText = "position:static;background:none;padding:0;backdrop-filter:none;";
-        playBtn.innerHTML = iconPause;
-        playBtn.setAttribute("aria-label", "Pause");
-        playBtn.addEventListener("click", () => {
-          if (video.paused) { video.play(); playBtn.innerHTML = iconPause; playBtn.setAttribute("aria-label", "Pause"); }
-          else { video.pause(); playBtn.innerHTML = iconPlay; playBtn.setAttribute("aria-label", "Play"); }
-        });
-        volWrap.appendChild(playBtn);
-
-        const volIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        volIcon.setAttribute("viewBox", "0 0 24 24");
-        volIcon.setAttribute("fill", "none");
-        volIcon.setAttribute("stroke", "currentColor");
-        volIcon.setAttribute("stroke-width", "2");
-        volIcon.setAttribute("stroke-linecap", "round");
-        volIcon.setAttribute("stroke-linejoin", "round");
-        volIcon.innerHTML = `<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>`;
-        volWrap.appendChild(volIcon);
-
-        const slider = document.createElement("input");
-        slider.type = "range";
-        slider.className = "volume-slider";
-        slider.min = 0; slider.max = 1; slider.step = 0.01; slider.value = 0;
-        slider.setAttribute("aria-label", "Volume");
-        slider.addEventListener("input", () => {
-          const v = parseFloat(slider.value);
-          video.volume = v;
-          video.muted = v === 0;
-          muteBtn.innerHTML = video.muted ? iconMuted + "Sound" : iconSound + "Mute";
-          muteBtn.setAttribute("aria-label", video.muted ? "Unmute" : "Mute");
-        });
-        volWrap.appendChild(slider);
-
-        muteBtn.addEventListener("click", () => {
-          video.muted = !video.muted;
-          muteBtn.innerHTML = video.muted ? iconMuted + "Sound" : iconSound + "Mute";
-          muteBtn.setAttribute("aria-label", video.muted ? "Unmute" : "Mute");
-          slider.value = video.muted ? 0 : 1;
-        });
-
-        wrap.appendChild(volWrap);
-        wrap.appendChild(muteBtn);
-      }
+      /* Replay + fullscreen, sitting to the left of the sound button in a
+         shared row. Returns the row so the caller can drop its own button in
+         after them — order is replay · fullscreen · sound. */
 
       function renderFromManifest(entry) {
         let mediaCount = 0;   // drives eager-vs-lazy
@@ -2939,7 +3147,18 @@
             wrap.className = "video-wrap";
             const v = mfVideo(node, eager);
             wrap.appendChild(v);
-            if (node.sound) mfVideoControls(v, wrap);
+            if (node.sound) {
+              addCentrePlay(v, wrap);
+              mfVideoControls(v, wrap, node.src);
+            } else {
+              // Silent clips are decorative motion with no controls of their
+              // own, so they behave like the images around them: click to
+              // open. Without this they were the only media on a project page
+              // with no way into the lightbox at all — which is why the
+              // Arboretet clips couldn't be opened.
+              item.style.cursor = "zoom-in";
+              item.addEventListener("click", () => openLightbox(node.src, "#1a1a1a", "video"));
+            }
             item.appendChild(wrap);
           } else {
             const img = mfImage(node, eager);
@@ -3097,10 +3316,16 @@
           item.classList.add("loaded");
           item.dataset.revealIdx = revealIndex++;
           if (projRevealObs) projRevealObs.observe(item);
-          // Only show audio controls for _player videos
+          // Only show audio controls for _player videos. This path can't know
+          // which it is up front — it probes _player.mp4 first and falls back
+          // to plain .mp4 — so the centre control is attached here, once it's
+          // clear which file actually loaded.
           if (videoAttempt === 0) {
             muteBtn.style.display = "";
             volWrap.style.display = "";
+            video.autoplay = false;
+            video.pause();               // sound videos wait to be started
+            addCentrePlay(video, wrap);
           }
           loadNextProjectItem();
         }, { once: true });
@@ -3143,28 +3368,8 @@
         volWrap.className = "volume-wrap";
         volWrap.style.display = "none";
 
-        const iconPlay  = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
-        const iconPause = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`;
-
-        const playBtn = document.createElement("button");
-        playBtn.className = "mute-btn";
-        playBtn.style.cssText = "position:static;background:none;padding:0;backdrop-filter:none;";
-        playBtn.innerHTML = iconPause;
-        playBtn.setAttribute("aria-label", "Pause");
-
-        playBtn.addEventListener("click", () => {
-          if (video.paused) {
-            video.play();
-            playBtn.innerHTML = iconPause;
-            playBtn.setAttribute("aria-label", "Pause");
-          } else {
-            video.pause();
-            playBtn.innerHTML = iconPlay;
-            playBtn.setAttribute("aria-label", "Play");
-          }
-        });
-
-        volWrap.appendChild(playBtn);
+        // Play/pause lives in the centre control now (see addCentrePlay);
+        // this bar is volume only.
 
         const volIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         volIcon.setAttribute("viewBox", "0 0 24 24");
@@ -3200,7 +3405,10 @@
         video.addEventListener("canplay", () => { wrap.style.opacity = "1"; }, { once: true });
         wrap.appendChild(video);
         wrap.appendChild(volWrap);
-        wrap.appendChild(muteBtn);
+        // video.src is read at click time, not now — this path swaps it while
+        // probing (_player.mp4, then plain .mp4), so capturing it here would
+        // hand the lightbox whichever URL happened to be set first.
+        addVideoActions(video, wrap, null).appendChild(muteBtn);
         item.appendChild(wrap);
         target.appendChild(item);
         } // end loadNormalItem
@@ -4735,6 +4943,18 @@
     const lightboxPrev  = document.getElementById("lightbox-prev");
     const lightboxNext  = document.getElementById("lightbox-next");
     const lightboxVideo = document.getElementById("lightbox-video");
+    const lightboxVideoWrap = document.getElementById("lightbox-video-wrap");
+
+    /* The lightbox gets the same player as the project pages: centre
+       play/pause, replay and sound. No fullscreen button — this *is* the
+       fullscreen view. Built once, on first use, then reused for every clip. */
+    let lbPlayerBuilt = false;
+    function ensureLightboxPlayer() {
+      if (lbPlayerBuilt || !lightboxVideoWrap) return;
+      lbPlayerBuilt = true;
+      addCentrePlay(lightboxVideo, lightboxVideoWrap);
+      mfVideoControls(lightboxVideo, lightboxVideoWrap, null, { fullscreen: false });
+    }
 
     let lbGallery      = [];
     let lbIndex        = 0;
@@ -4742,7 +4962,7 @@
 
     function buildGallery() {
       // Collect all loaded clickable media (images + videos) on the current page
-      const sel = '.archive-img img, .archive-img video, .project-hero img, .project-img-item img';
+      const sel = '.archive-img img, .archive-img video, .project-hero img, .project-hero video, .project-img-item img, .project-img-item video';
       const items = Array.from(document.querySelectorAll(sel))
         .filter(el => el.tagName === "VIDEO" ? el.videoWidth > 0 : el.naturalWidth > 0);
 
@@ -4777,7 +4997,7 @@
 
       lightboxColor.style.display = "none";
       lightboxImg.style.display   = "none";
-      lightboxVideo.style.display = "none";
+      if (lightboxVideoWrap) lightboxVideoWrap.style.display = "none";
       lightboxVideo.pause();
       lightboxVideo.src = "";
 
@@ -4786,8 +5006,9 @@
       lightboxWrap.style.animation = "";
 
       if (item && item.src && item.type === "video") {
+        ensureLightboxPlayer();
         lightboxVideo.src = item.src;
-        lightboxVideo.style.display = "block";
+        if (lightboxVideoWrap) lightboxVideoWrap.style.display = "block";
         lightboxVideo.play().catch(() => {});
       } else if (item && item.src) {
         lightboxImg.src = "";
@@ -4807,10 +5028,27 @@
 
     let lbReturnFocus = null;
 
-    function openLightbox(src, color) {
+    function openLightbox(src, color, type) {
       lbGallery = buildGallery();
-      lbIndex   = lbGallery.findIndex(i => i.src === src);
-      if (lbIndex === -1) { lbGallery = [{ src, color }]; lbIndex = 0; }
+
+      // buildGallery reads el.src, which the DOM always reports as an absolute
+      // URL. Callers pass the manifest's relative path, so these have to be
+      // compared like for like — otherwise an item is never found in its own
+      // gallery and the arrows have nothing to step through.
+      let abs = src;
+      try { abs = new URL(src, location.href).href; } catch (e) {}
+      lbIndex = lbGallery.findIndex(i => i.src === abs || i.src === src);
+
+      if (lbIndex === -1) {
+        // Standing alone, the type has to be carried explicitly: without it
+        // showLightboxItem takes its image branch and tries to load a video
+        // into an <img>, which fails and falls through to a flat colour block.
+        lbGallery = [{
+          src, color,
+          type: type || (/\.(mp4|webm|mov)$/i.test(src) ? "video" : "image"),
+        }];
+        lbIndex = 0;
+      }
 
       lbReturnFocus = document.activeElement;
       showLightboxItem(lbIndex);
