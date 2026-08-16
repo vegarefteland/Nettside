@@ -401,7 +401,8 @@
       overflow: hidden;
       pointer-events: none;
     }
-    .nav-pill-center.is-home .home-label { display: none; }
+    .nav-pill-center.is-home .home-label,
+    .nav-pill-center.is-archive .home-label { display: none; }
     .home-label span {
       font-size: 13.5px;
       font-weight: 500;
@@ -991,38 +992,6 @@
     .back-to-top-btn:hover { opacity: 0.75; }
     .back-to-top-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
 
-    .archive-shuffle-wrap {
-      display: flex;
-      justify-content: center;
-      padding: 40px 0 20px;
-      visibility: hidden;
-      opacity: 0;
-      transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
-                  visibility 0s 0.6s;
-    }
-    .archive-shuffle-wrap.visible {
-      visibility: visible;
-      opacity: 1;
-      transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
-                  visibility 0s 0s;
-    }
-    .archive-shuffle-btn {
-      background: var(--tag-bg);
-      color: var(--tag-fg);
-      border: 1px solid var(--tag-border);
-      border-radius: 100px;
-      padding: 6px 16px 6px 12px;
-      font-size: 12.5px;
-      font-weight: 500;
-      font-family: var(--font);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: opacity 180ms ease;
-    }
-    .archive-shuffle-btn:hover { opacity: 0.75; }
-    .archive-shuffle-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
 
     .archive-img {
       position: absolute;
@@ -1031,9 +1000,14 @@
          instead of being clipped against neighbouring cells. */
       opacity: 0; /* hidden until cascade-in class is added (see renderArchive) */
     }
-    /* Position transitions only enabled after the initial shuffle settles —
-       prevents cells from "flying" from their pre-shuffle spot during reveal. */
-    .archive-grid.layout-settled .archive-img {
+    /* Position transitions only enabled once the first layout settles —
+       prevents cells from "flying" in from wherever they started.
+
+       Scoped to masonry on purpose. Sandbox is a static pile and Orbit is a
+       fixed ring, so neither gains anything from sliding — but both would pay
+       for it: every image that finishes loading re-runs the layout, and an
+       animated top/left/width on 51 cells reflows the whole grid each frame. */
+    .archive-grid.layout-settled.mode-masonry .archive-img {
       transition: top 800ms cubic-bezier(0.16, 1, 0.3, 1),
                   left 800ms cubic-bezier(0.16, 1, 0.3, 1),
                   width 800ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -1079,7 +1053,7 @@
     }
 
     /* Per-image reveal — each cell slides up + fades in the moment its image
-       finishes loading. After the last one settles, masonry positions shuffle. */
+       finishes loading. */
     .archive-img.cascade-in {
       animation: cascadeIn 340ms var(--ease-out) both;
     }
@@ -1087,11 +1061,293 @@
       from { opacity: 0; transform: translateY(28px); filter: blur(2px); }
       to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
     }
+    /* Orbit gets an opacity-only reveal. cascadeIn animates a blur filter,
+       which forces the compositor to re-render each thumb every frame — barely
+       noticeable spread down a masonry column as images trickle in, but in the
+       ring they land close together and 51 concurrent blurs is what makes the
+       load stutter. Opacity alone is a straight composite. */
+    @keyframes cascadeFade {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+    .archive-grid.mode-orbit .archive-img.cascade-in {
+      animation: cascadeFade 240ms ease both;
+    }
     .archive-img.cd-spin img {
       border-radius: 50%;
       /* JS drives transform every frame — disable the generic transform
          transition so it doesn't fight the per-frame writes. */
       transition: box-shadow 350ms var(--ease-out);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+     * ARCHIVE LAYOUT MODES
+     *
+     * All three modes reuse the *same* cells — only their coordinates
+     * change. Because .layout-settled already transitions top/left/width,
+     * switching mode makes every image physically fly to its new place
+     * instead of snapping. `height` is added to that transition here so
+     * Orbit's square thumbs morph too.
+     *
+     * One subtlety worth knowing: cascadeIn is a `both`-filled animation
+     * on the CELL, so it permanently holds `transform: translateY(0)` and
+     * would beat any transform we set on the cell (animations outrank
+     * normal declarations). That's why Sandbox rotation lives on the inner
+     * media element instead of the cell.
+     * ═══════════════════════════════════════════════════════════════ */
+
+    .archive-viewport { position: relative; }
+
+    /* Mode swap: fade out, move everything while it's invisible, fade back in.
+       The obvious alternative — letting the cells transition between layouts —
+       animates top/left/width/height, which are all LAYOUT properties, so
+       every frame reflows all 51 cells and the "morph" crawls. Opacity is
+       composited, so this costs the same at 51 images or 500.
+
+       The fade goes on the grid rather than the cells because each cell's
+       opacity is already owned by the both-filled cascadeIn animation, which
+       would outrank any opacity we set on it here. */
+    .archive-grid { transition: opacity 130ms ease; }
+    .archive-grid.is-swapping { opacity: 0; }
+
+    /* While swapping, positions must jump rather than slide — otherwise the
+       cells are still travelling when the fade-in finishes and you see the
+       tail of exactly the sluggish movement this replaces. */
+    .archive-grid.no-morph .archive-img { transition: none !important; }
+
+    /* ── Sandbox ─────────────────────────────────────────────────── */
+    /* Sandbox takes the whole window — the pile *is* the page, with the nav
+       pills floating over it. Fixed rather than sized inside the flow, so it
+       reaches under the nav and out to all four edges instead of stopping at
+       the page padding. It paints the page background because it now covers
+       content that's still in the flow behind it. z-index stays well under
+       .top-nav (200) so the pills keep their place on top. */
+    .archive-viewport.is-sandbox {
+      position: fixed;
+      inset: 0;
+      height: auto;
+      min-height: 0;
+      z-index: 1;
+      border-radius: 0;
+      background: var(--bg);
+      overflow: hidden;
+      touch-action: none;          /* pointer events drive dragging */
+      /* Without this the browser starts selecting as soon as the pointer
+         moves, and every image the cursor crosses lights up blue. */
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    /* The archive blurb would otherwise sit behind the full-screen pile. */
+    html.archive-sandbox .archive-intro { visibility: hidden; }
+    /* Rotation and scale go on the CELL here, not on the image.
+       The cell is the drag target, so transforming the image instead left the
+       visible corners of a rotated picture sitting outside its own clickable
+       box — grabbing there caught whatever was underneath. That's half of why
+       some images felt undraggable.
+
+       cascadeIn is a both-filled animation holding the cell's transform and
+       would outrank this, so it's switched off; since that same animation
+       supplied the reveal opacity, opacity has to be restored explicitly. */
+    .archive-grid.mode-sandbox .archive-img {
+      animation: none !important;
+      opacity: 1;
+      cursor: grab;
+      transform: rotate(var(--rot, 0deg)) scale(var(--scl, 1));
+      transition: transform 220ms var(--ease-out);
+    }
+    .archive-grid.mode-sandbox .archive-img:hover {
+      transform: rotate(var(--rot, 0deg)) scale(calc(var(--scl, 1) * 1.04));
+    }
+    .archive-grid.mode-sandbox .archive-img.is-dragging {
+      cursor: grabbing;
+      transition: none !important;   /* must track the cursor exactly */
+      transform: rotate(var(--rot, 0deg)) scale(calc(var(--scl, 1) * 1.06));
+    }
+
+    /* drop-shadow follows the alpha channel; box-shadow follows the box.
+       19 of these images carry transparent margins, so box-shadow was drawing
+       a rectangle around empty space — the "transparent borders".
+       pointer-events: none hands hit-testing to the cell, which JS has sized
+       to the actual content, so a transparent margin no longer swallows
+       clicks meant for the image beneath it. */
+    .archive-grid.mode-sandbox .archive-img img,
+    .archive-grid.mode-sandbox .archive-img video {
+      position: absolute;
+      pointer-events: none;
+      /* Separate from user-select: this is the browser's native image drag,
+         which would otherwise tear off a translucent ghost of the picture. */
+      -webkit-user-drag: none;
+      user-select: none;
+      -webkit-user-select: none;
+      transform: none;
+      filter: drop-shadow(0 5px 12px rgba(0, 0, 0, 0.17));
+      box-shadow: none;
+      transition: filter 220ms var(--ease-out);
+    }
+    .archive-grid.mode-sandbox .archive-img:hover img,
+    .archive-grid.mode-sandbox .archive-img:hover video { transform: none; }
+    .archive-grid.mode-sandbox .archive-img.is-dragging img,
+    .archive-grid.mode-sandbox .archive-img.is-dragging video {
+      filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.26));
+    }
+    .sandbox-hint {
+      position: absolute;
+      left: 50%;
+      bottom: 12px;
+      transform: translateX(-50%);
+      font-size: 11.5px;
+      letter-spacing: 0.02em;
+      color: var(--muted);
+      background: var(--nav-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 100px;
+      padding: 5px 12px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 400ms ease;
+    }
+    .archive-viewport.is-sandbox .sandbox-hint { opacity: 1; }
+
+    /* ── Orbit ──────────────────────────────────────────────────── */
+    /* Perfect circles. The clip lives on the CELL rather than on the image,
+       because JS sizes and offsets the image so its *content* fills the
+       circle — object-fit: cover would crop the middle of the file instead,
+       and for the many archive images padded with transparency that centres
+       on empty space, leaving a fragment adrift in a disc of page colour.
+       Most obvious in light mode, where that padding reads as white. */
+    .archive-grid.mode-orbit .archive-img {
+      z-index: 2;
+      border-radius: 50%;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.10);
+      transition: transform 260ms var(--ease-out), box-shadow 260ms var(--ease-out);
+    }
+    .archive-grid.mode-orbit .archive-img img,
+    .archive-grid.mode-orbit .archive-img video {
+      position: absolute;
+      object-fit: fill;        /* sized exactly by JS — nothing left to fit */
+      border-radius: 0;
+      box-shadow: none;
+      transform: none;
+    }
+    /* Scaling moves to the cell: with overflow clipped, scaling the image
+       would zoom inside a fixed disc instead of growing the thumb. Orbit's
+       reveal is opacity-only, so the cell's transform is free to use here.
+
+       Size alone marks the active thumb — no outline. The two states are
+       spaced far enough apart (1.14 vs 1.36) to stay legible while the idle
+       cycle moves the selection on its own, with no pointer to explain it.
+       .is-active must come after :hover: they carry equal specificity, so
+       source order decides which wins on the thumb that is both. */
+    .archive-grid.mode-orbit .archive-img:hover { transform: scale(1.14); z-index: 3; }
+    .archive-grid.mode-orbit .archive-img.is-active {
+      transform: scale(1.36);
+      z-index: 4;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+    }
+
+    .orbit-stage {
+      position: absolute;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;   /* never steals hover from the ring */
+      z-index: 1;
+    }
+    .archive-grid.mode-orbit .orbit-stage { display: flex; }
+    .orbit-stage img,
+    .orbit-stage video {
+      position: absolute;      /* sized and offset by fitOrbitMedia */
+      object-fit: fill;
+      border-radius: 4px;
+      display: none;
+      opacity: 0;
+      /* drop-shadow traces the artwork; box-shadow would outline the file,
+         drawing a rectangle around the transparent padding. */
+      filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.16));
+    }
+    /* An animation rather than a transition, because consecutive images are
+       usually the same element with a new src — nothing changes state for a
+       transition to fire on. orbitShow re-triggers this explicitly. */
+    .orbit-stage .is-showing {
+      display: block;
+      animation: orbitBloom 460ms var(--ease-out) both;
+    }
+    @keyframes orbitBloom {
+      from { opacity: 0; transform: scale(0.90); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    /* Sits inside the ring, in the clear space between the bottom of the
+       image and the thumbs — the picture is fitted to the circle, so that
+       gap is always there whatever its shape. Hanging below the stage left
+       only ~3px before the inner ring, and none at all once more images
+       shrink the centre. */
+    .orbit-caption {
+      position: absolute;
+      bottom: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11.5px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+
+    /* ── The mode toggle, living in the centre nav pill ──────────── */
+    .archive-modes { display: none; position: relative; gap: 2px; }
+    .nav-pill-center.is-archive .archive-modes { display: flex; }
+    .nav-pill-center.is-archive .nav-pill-name,
+    .nav-pill-center.is-archive .skills-wheel { display: none; }
+    .nav-pill-center.is-archive { cursor: default; }
+
+    /* One marker that slides between the labels, rather than a background
+       switching on and off per button.
+
+       Its colours come from --fg/--bg, not --tag-bg: in dark mode --tag-bg is
+       #000000 while the pill behind it is rgba(13,13,13,.88), so the marker
+       was black on near-black and effectively invisible. Taking the theme's
+       own ink and paper gives the same contrast in light, dark and custom. */
+    .archive-mode-thumb {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      height: 25px;
+      margin-top: -12.5px;
+      width: var(--thumb-w, 0px);
+      transform: translateX(var(--thumb-x, 0px));
+      background: var(--fg);
+      border-radius: 100px;
+      pointer-events: none;
+      transition: transform 340ms cubic-bezier(0.22, 1, 0.36, 1),
+                  width     340ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    /* First paint — and any reflow that moves the labels — must place the
+       marker without sliding it in from wherever it happened to be. */
+    .archive-modes.no-anim .archive-mode-thumb { transition: none; }
+
+    .archive-mode-btn {
+      position: relative;
+      z-index: 1;                 /* label rides above the marker */
+      font-family: 'Arimo', system-ui, sans-serif;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--muted);
+      background: none;
+      border: 0;
+      border-radius: 100px;
+      padding: 4px 11px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color 220ms ease;
+    }
+    .archive-mode-btn:hover { color: var(--fg); }
+    .archive-mode-btn.is-on { color: var(--bg); }
+
+    @media (max-width: 600px) {
+      /* Layout modes are desktop-only, so the switch stays hidden here along
+         with the rest of the centre pill. JS forces masonry below this same
+         breakpoint — see modesAvailable(). */
     }
 
     /* Project pages still use the old fade-up — defined here so the
@@ -1234,6 +1490,10 @@
     }
 
     .archive-img { cursor: zoom-in; }
+    /* Orbit has no lightbox to open, so the magnifier would be promising
+       something that doesn't happen. The thumbs are hover targets, not
+       buttons — a plain pointer is the honest cursor. */
+    .archive-grid.mode-orbit .archive-img { cursor: default; }
 
     /* ─── Project Detail Page ────────────────────────────────── */
     .project-layout {
@@ -1975,7 +2235,7 @@
 
       <span class="section-tag">About</span>
       <p class="about-bio">
-        I'm Vegar (20), a first-year Design & Visual Communication student at the University of Bergen.
+        I'm Vegar (20), a second-year Design & Visual Communication student at the University of Bergen.
       </p>
 
       <hr class="about-divider">
@@ -2062,7 +2322,7 @@
             </div>
             <div class="info-section">
               <p class="info-label">Last Updated</p>
-              <p class="info-text"><!--LAST_UPDATED-->Aug 5. 2026<!--/LAST_UPDATED--></p>
+              <p class="info-text"><!--LAST_UPDATED-->Aug 16. 2026<!--/LAST_UPDATED--></p>
             </div>
             <p class="info-version">v2.2</p>
           </div>
@@ -2119,16 +2379,11 @@
        ══════════════════════════════════════════════════════════════ -->
   <section id="page-archive" class="page" aria-label="Archive">
     <p class="archive-intro"></p>
-    <div class="archive-grid" id="archive-grid"></div>
-    <div class="archive-shuffle-wrap">
-      <button class="archive-shuffle-btn" id="archive-shuffle-btn" aria-label="Shuffle archive">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
-          <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
-          <line x1="4" y1="4" x2="9" y2="9"/>
-        </svg>
-        Shuffle
-      </button>
+    <!-- A plain pass-through in Grid/Orbit; in Sandbox it becomes the
+         fixed, screen-sized frame the pile of images lives inside. -->
+    <div class="archive-viewport" id="archive-viewport">
+      <div class="archive-grid" id="archive-grid"></div>
+      <div class="sandbox-hint" aria-hidden="true">drag the images around</div>
     </div>
   </section>
 
@@ -2176,6 +2431,13 @@
     <div class="nav-pill" id="nav-left"></div>
     <div class="nav-pill nav-pill-center">
       <span class="nav-pill-name">Vegar Efteland Melhus</span>
+      <!-- Takes over the centre pill on the archive page only (see renderNav) -->
+      <div class="archive-modes" role="group" aria-label="Archive layout">
+        <span class="archive-mode-thumb" aria-hidden="true"></span>
+        <button type="button" class="archive-mode-btn" data-mode="masonry">Grid</button>
+        <button type="button" class="archive-mode-btn" data-mode="sandbox">Sandbox</button>
+        <button type="button" class="archive-mode-btn" data-mode="orbit">Orbit</button>
+      </div>
       <div class="skills-wheel" aria-hidden="true">
         <div class="skills-reel">
           <span>Graphic Design</span>
@@ -2259,27 +2521,32 @@
       }
 
       // Stop wiggle when leaving archive
-      if (pageId !== "archive") stopArchiveWiggle();
+      if (pageId !== "archive") {
+        stopArchiveWiggle();
+        orbitStopIdle();
+        document.documentElement.classList.remove("archive-sandbox");
+      }
 
-      // Re-render archive fresh each visit so shuffle + masonry are correct
+      // Re-render archive fresh each visit so the layout is rebuilt correctly
       if (pageId === "archive") {
         const intro = document.querySelector(".archive-intro");
         if (intro) intro.textContent = SITE.archiveIntro || "";
         const grid = document.getElementById("archive-grid");
         grid.innerHTML = "";
         renderArchive();
+        applyArchiveMode();   // re-assert the current mode on the fresh cells
       }
 
       renderNav();
       window.scrollTo(0, 0);
     }
 
-    // Archive shuffle button
     // Idle wiggle — randomly pick one archive image at a time
     let wiggleTimer = null;
     function startArchiveWiggle() {
       stopArchiveWiggle();
       if (window.innerWidth <= 600) return;
+      if (archiveMode !== "masonry") return;   // Sandbox/Orbit drive their own motion
       function wiggleNext() {
         const imgs = Array.from(document.querySelectorAll("#archive-grid .archive-img.cascade-in:not(.wiggle):not(.cd-spin)"));
         if (!imgs.length || currentPage !== "archive") { stopArchiveWiggle(); return; }
@@ -2299,36 +2566,6 @@
       if (wiggleTimer) { clearTimeout(wiggleTimer); wiggleTimer = null; }
     }
 
-    document.getElementById("archive-shuffle-btn").addEventListener("click", () => {
-      if (!archiveCells.length) return;
-      const grid = document.getElementById("archive-grid");
-      if (!grid) return;
-
-      // Fade out shuffle button and all cells together
-      const shuffleWrap = document.querySelector(".archive-shuffle-wrap");
-      if (shuffleWrap) {
-        shuffleWrap.style.transition = "opacity 300ms ease";
-        shuffleWrap.style.opacity = "0";
-      }
-      archiveCells.forEach(cell => {
-        cell.style.transition = "opacity 300ms ease";
-        cell.style.opacity = "0";
-      });
-
-      // After fade out: clear grid, scroll to top, re-render fresh
-      setTimeout(() => {
-        if (shuffleWrap) {
-          shuffleWrap.classList.remove("visible");
-          shuffleWrap.style.transition = "";
-          shuffleWrap.style.opacity = "";
-        }
-        grid.innerHTML = "";
-        grid.style.height = "";
-        archiveCells = [];
-        window.scrollTo({ top: 0, behavior: "instant" });
-        renderArchive();
-      }, 320);
-    });
 
     // Back to top — observe and reveal when scrolled into view
     let backToTopObs = null;
@@ -3146,10 +3383,26 @@
       left.innerHTML  = "";
       right.innerHTML = "";
 
-      centerPill.onclick = () => navigate("home");
-      centerPill.setAttribute("role", "button");
-      centerPill.setAttribute("tabindex", "0");
-      centerPill.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate("home"); } };
+      // On the archive page the centre pill stops being a "go home" button and
+      // becomes the layout toggle, so its click/keyboard roles are stripped —
+      // otherwise every press of a mode button would also navigate home.
+      const isArchive = currentPage === "archive";
+      centerPill.classList.toggle("is-archive", isArchive);
+      if (isArchive) {
+        centerPill.onclick = null;
+        centerPill.onkeydown = null;
+        centerPill.removeAttribute("role");
+        centerPill.removeAttribute("tabindex");
+        // The switch was display:none a moment ago, so its labels measured as
+        // zero. Now that it's laid out, place the marker — without animating,
+        // or it would slide in from the left edge every time you arrive here.
+        positionModeThumb(false);
+      } else {
+        centerPill.onclick = () => navigate("home");
+        centerPill.setAttribute("role", "button");
+        centerPill.setAttribute("tabindex", "0");
+        centerPill.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate("home"); } };
+      }
       centerPill.classList.toggle("is-home", currentPage === "home");
 
       const btn = document.createElement("button");
@@ -3319,9 +3572,96 @@
     let archiveCells = [];
     let archiveGen   = 0; // incremented each render to cancel stale loads
 
+    /* ── Archive display modes ────────────────────────────────────────
+     * "masonry" (default) · "sandbox" (pan/zoom plane) · "orbit" (ring)
+     * Remembered across visits, but never across a broken value.
+     * ─────────────────────────────────────────────────────────────── */
+    const ARCHIVE_MODES = ["masonry", "sandbox", "orbit"];
+
+    /* Two values, deliberately. `archiveModePref` is what the visitor chose;
+       `archiveMode` is what's actually running. They differ on phones, where
+       the modes aren't offered — Sandbox needs a pointer to drag with and
+       Orbit needs hover, and neither exists on touch. Forcing masonry into
+       the live value while leaving the preference untouched means a desktop
+       choice survives a visit on a phone instead of being overwritten. */
+    let archiveModePref = "masonry";
+    let archiveMode     = "masonry";
+    try {
+      const saved = localStorage.getItem("archiveMode");
+      if (ARCHIVE_MODES.includes(saved)) archiveModePref = saved;
+    } catch (e) {}
+
+    // Matches the 600px breakpoint that hides the centre nav pill.
+    function modesAvailable() { return window.innerWidth > 600; }
+    function effectiveMode()  { return modesAvailable() ? archiveModePref : "masonry"; }
+
+    archiveMode = effectiveMode();
+
+    // Aspect ratio (h/w) of a cell's media. Prefers the manifest's recorded
+    // dimensions, which are known before the file downloads — that's what lets
+    // the layout be correct on the first frame instead of settling as images
+    // arrive. Falls back to the element for the no-manifest path.
+    function cellRatio(cell) {
+      if (cell.dataset.mw && cell.dataset.mh) return +cell.dataset.mh / +cell.dataset.mw;
+      const img = cell.querySelector("img");
+      const vid = !img && cell.querySelector("video");
+      const media = img || vid;
+      if (!media) return 1;
+      return vid
+        ? (media.videoHeight || 9) / (media.videoWidth || 16)
+        : (media.naturalHeight || 1) / (media.naturalWidth || 1);
+    }
+
+    /* Placement order for Grid and Sandbox, reshuffled once per render.
+       archiveCells itself stays in file order — that's what keeps the layout
+       stable while images load, and what Orbit walks around its ring. Only
+       the order they're *placed* in is randomised, so the two can differ
+       without building the cells twice. */
+    let archiveOrder = [];
+
+    function shuffleArchiveOrder(n) {
+      archiveOrder = Array.from({ length: n }, (_, i) => i);
+      for (let i = archiveOrder.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [archiveOrder[i], archiveOrder[j]] = [archiveOrder[j], archiveOrder[i]];
+      }
+    }
+
+    /* Cells in placement order, self-healing if the two ever drift apart.
+       The fallback loader appends cells one at a time as it discovers them,
+       so the order can't simply be shuffled once up front — and falling back
+       to file order there is what made Grid come out strictly numeric.
+       New arrivals are spliced in at a random position instead of triggering
+       a reshuffle, so images already on screen never jump. */
+    function orderedCells() {
+      const n = archiveCells.length;
+      if (archiveOrder.length !== n) {
+        if (archiveOrder.length > n) archiveOrder = archiveOrder.filter(i => i < n);
+        for (let i = archiveOrder.length; i < n; i++) {
+          archiveOrder.splice(Math.floor(Math.random() * (archiveOrder.length + 1)), 0, i);
+        }
+      }
+      return archiveOrder.map(i => archiveCells[i]);
+    }
+
+    // Stable pseudo-random in [0,1) — same cell always lands in the same
+    // spot on the canvas, so resizing doesn't reshuffle the scatter.
+    function seededRand(i, salt) {
+      const x = Math.sin(i * 127.1 + salt * 311.7) * 43758.5453;
+      return x - Math.floor(x);
+    }
+
+    function archiveLayout() {
+      if (archiveMode === "sandbox") return sandboxLayout();
+      if (archiveMode === "orbit")  return orbitLayout();
+      return masonryLayout();
+    }
+
     function masonryLayout() {
       const grid = document.getElementById("archive-grid");
       if (!grid || !archiveCells.length) return;
+
+      grid.style.width = "";           // canvas mode sets an explicit plane width
 
       const GAP  = 35;
       const W    = grid.offsetWidth;
@@ -3329,18 +3669,13 @@
       const colW = (W - GAP * (cols - 1)) / cols;
       const colH = new Array(cols).fill(0);
 
-      archiveCells.forEach(cell => {
-        const img    = cell.querySelector("img");
-        const vid    = !img && cell.querySelector("video");
-        const media  = img || vid;
-        const ratio  = vid
-          ? (media.videoHeight || 9) / (media.videoWidth || 16)
-          : media.naturalHeight / media.naturalWidth;
-        const height = colW * ratio;
+      orderedCells().forEach(cell => {
+        const height = colW * cellRatio(cell);
         const col    = colH.indexOf(Math.min(...colH));
         const top    = colH[col] + (colH[col] > 0 ? GAP : 0);
 
         cell.style.width  = colW + "px";
+        cell.style.height = "";        // orbit sets a square height
         cell.style.left   = col * (colW + GAP) + "px";
         cell.style.top    = top + "px";
         colH[col]         = top + height;
@@ -3348,6 +3683,598 @@
 
       grid.style.height = Math.max(...colH) + "px";
     }
+
+    /* ── SANDBOX ──────────────────────────────────────────────────────
+     * A loose pile of images the visitor can rearrange. Positions are
+     * genuinely random and the plane is deliberately smaller than the
+     * total image area, so pieces overlap and stack like prints dropped
+     * on a desk. Each one carries its own slight rotation and scale.
+     *
+     * Once placed, a cell's position lives on its own dataset — that's
+     * what makes dragging stick: layout reads back what the visitor set
+     * instead of recomputing it, so a resize never undoes their arrangement.
+     *
+     * There is no zoom and no panning: the pile occupies exactly the screen
+     * you're looking at. That means image size has to be derived from the
+     * viewport rather than fixed, or the same pile would be sparse on a
+     * monitor and unusable on a phone.
+     * ─────────────────────────────────────────────────────────────── */
+    let sandboxTopZ = 10;
+
+    /* Find where an image's non-transparent pixels actually are, as fractions
+       of its own size. Many archive exports carry wide transparent margins —
+       invisible, but they still form part of the element's box, so they cast
+       shadows around nothing and intercept clicks aimed at whatever is behind.
+       Measuring the real content lets the cell wrap the picture instead of the
+       file. Sampled at 48×48 rather than full size: accurate to ~2% and
+       instant even on a 3500px source. Result is cached on the cell. */
+    const ALPHA_N = 48;
+    let alphaCanvas = null;
+
+    function contentBox(cell) {
+      if (cell.dataset.abw) {
+        return { x: +cell.dataset.abx, y: +cell.dataset.aby,
+                 w: +cell.dataset.abw, h: +cell.dataset.abh };
+      }
+      const FULL = { x: 0, y: 0, w: 1, h: 1 };
+      const img = cell.querySelector("img");
+      if (!img || !img.naturalWidth) return FULL;   // videos have no alpha
+
+      if (!alphaCanvas) {
+        alphaCanvas = document.createElement("canvas");
+        alphaCanvas.width = alphaCanvas.height = ALPHA_N;
+      }
+      let data;
+      try {
+        const ctx = alphaCanvas.getContext("2d", { willReadFrequently: true });
+        ctx.clearRect(0, 0, ALPHA_N, ALPHA_N);
+        ctx.drawImage(img, 0, 0, ALPHA_N, ALPHA_N);
+        data = ctx.getImageData(0, 0, ALPHA_N, ALPHA_N).data;
+      } catch (e) { return FULL; }
+
+      let x0 = ALPHA_N, y0 = ALPHA_N, x1 = -1, y1 = -1;
+      for (let y = 0; y < ALPHA_N; y++) {
+        for (let x = 0; x < ALPHA_N; x++) {
+          if (data[(y * ALPHA_N + x) * 4 + 3] > 12) {
+            if (x < x0) x0 = x;
+            if (x > x1) x1 = x;
+            if (y < y0) y0 = y;
+            if (y > y1) y1 = y;
+          }
+        }
+      }
+      if (x1 < 0) return FULL;                       // fully transparent — leave alone
+
+      // Grow by one sample either way so soft edges don't get clipped.
+      const bx = Math.max(0, x0 - 1) / ALPHA_N;
+      const by = Math.max(0, y0 - 1) / ALPHA_N;
+      const bw = Math.min(ALPHA_N, x1 + 2) / ALPHA_N - bx;
+      const bh = Math.min(ALPHA_N, y1 + 2) / ALPHA_N - by;
+
+      const box = (bw > 0.97 && bh > 0.97) ? FULL : { x: bx, y: by, w: bw, h: bh };
+      cell.dataset.abx = box.x; cell.dataset.aby = box.y;
+      cell.dataset.abw = box.w; cell.dataset.abh = box.h;
+      return box;
+    }
+
+    function sandboxLayout() {
+      const grid = document.getElementById("archive-grid");
+      const vp   = document.getElementById("archive-viewport");
+      if (!grid || !vp || !archiveCells.length) return;
+
+      const planeW = vp.clientWidth;
+      const planeH = vp.clientHeight;
+      grid.style.width  = planeW + "px";
+      grid.style.height = planeH + "px";
+
+      const seed = archiveGen * 13;   // new scatter per render, stable on resize
+
+      /* Keep the pile off the "drag the images around" label. Measured with
+         getBoundingClientRect rather than offsetLeft because the label is
+         centred with translateX(-50%), which offsetLeft doesn't account for.
+         The grid sits flush inside the viewport, so viewport coordinates and
+         grid coordinates are the same thing. */
+      const hint = vp.querySelector(".sandbox-hint");
+      let zone = null;
+      if (hint && hint.offsetWidth) {
+        const PAD = 16;
+        const vr = vp.getBoundingClientRect();
+        const hr = hint.getBoundingClientRect();
+        zone = { x0: hr.left - vr.left - PAD, y0: hr.top - vr.top - PAD,
+                 x1: hr.right - vr.left + PAD, y1: hr.bottom - vr.top + PAD };
+      }
+      const hitsZone = (x, y, w, h) =>
+        zone && x < zone.x1 && x + w > zone.x0 && y < zone.y1 && y + h > zone.y0;
+
+      /* Solve for the base width that makes the images cover COVER× the
+         screen. Each image is base × f(i), so total area is
+         base² · Σ(f² · ratio) — invert that for base. Above 1 the pile is
+         guaranteed to overlap itself; 1.25 gives a real stack while leaving
+         most pieces substantially visible. */
+      const COVER = 1.25;
+      const cells = orderedCells();
+      const f     = cells.map((_, i) => 0.78 + seededRand(i, seed + 1) * 0.62);
+      // Ratios are measured on the visible content, not the file, so an image
+      // padded with transparency isn't treated as bigger than it looks.
+      const boxes = cells.map(contentBox);
+      const ratio = cells.map((cell, i) =>
+        cellRatio(cell) * (boxes[i].h / boxes[i].w));
+      const denom = cells.reduce((s, _, i) => s + f[i] * f[i] * ratio[i], 0) || 1;
+      const base  = Math.sqrt(COVER * planeW * planeH / denom);
+
+      cells.forEach((cell, i) => {
+        const w = base * f[i];
+        const h = w * ratio[i];
+
+        /* The cell is the content box. The image is blown up and pulled back
+           by its own margins so the visible part lands exactly on the cell —
+           the transparent surround still exists, it just hangs outside and,
+           being pointer-events: none, no longer catches anything. */
+        const bb    = boxes[i];
+        const media = cell.querySelector("img, video");
+        if (media) {
+          const iw = w / bb.w;
+          media.style.width  = iw + "px";
+          media.style.height = (iw * cellRatio(cell)) + "px";
+          media.style.left   = (-bb.x * iw) + "px";
+          media.style.top    = (-bb.y * iw * cellRatio(cell)) + "px";
+        }
+        cell.style.height = h + "px";
+
+        // Read back a dragged position if there is one; otherwise scatter.
+        // Placement allows a little bleed off each edge so the pile reads as
+        // continuing past the frame rather than being neatly contained.
+        let x = cell.dataset.sx, y = cell.dataset.sy;
+        if (x === undefined || y === undefined) {
+          // Re-roll until the piece misses the hint label. Fresh salt each
+          // attempt, so the sequence stays deterministic but doesn't retry
+          // the same spot. If it never finds one, lift it clear above.
+          let t = 0;
+          do {
+            x = -w * 0.15 + seededRand(i, seed + 2 + t * 17) * (planeW - w * 0.7);
+            y = -h * 0.15 + seededRand(i, seed + 3 + t * 17) * (planeH - h * 0.7);
+            t++;
+          } while (t < 24 && hitsZone(x, y, w, h));
+          if (hitsZone(x, y, w, h)) y = Math.min(y, zone.y0 - h);
+          cell.dataset.sx = x;
+          cell.dataset.sy = y;
+        }
+
+        const rot = (seededRand(i, seed + 4) - 0.5) * 14;    // ±7°
+        const scl = 0.92 + seededRand(i, seed + 5) * 0.16;   // 0.92–1.08
+
+        cell.style.width  = w + "px";   // height was set above, from the content box
+        cell.style.left   = parseFloat(x) + "px";
+        cell.style.top    = parseFloat(y) + "px";
+        cell.style.setProperty("--rot", rot.toFixed(2) + "deg");
+        cell.style.setProperty("--scl", scl.toFixed(3));
+        if (!cell.style.zIndex) cell.style.zIndex = String(1 + (i % 7));
+      });
+    }
+
+    /* Per-image dragging. Bound once; only active while the viewport carries
+       .is-sandbox, so the handlers cost nothing in the other modes. */
+    function initSandboxControls() {
+      const vp = document.getElementById("archive-viewport");
+      if (!vp || vp.dataset.sandboxBound) return;
+      vp.dataset.sandboxBound = "1";
+
+      let dragging = false, moved = 0, lastX = 0, lastY = 0, pid = null;
+      let heldCell = null;                 // the image being dragged, if any
+      const active = () => vp.classList.contains("is-sandbox");
+
+      vp.addEventListener("pointerdown", e => {
+        if (!active() || e.button !== 0) return;
+        // Only images are draggable — there's no plane to pan.
+        heldCell = e.target.closest(".archive-img");
+        if (!heldCell) return;
+        // Suppress the browser's own press-and-drag behaviour (text selection
+        // and image dragging) at the source, before it ever starts.
+        e.preventDefault();
+        dragging = true; moved = 0; lastX = e.clientX; lastY = e.clientY;
+        pid = e.pointerId;
+        heldCell.classList.add("is-dragging");
+        heldCell.style.zIndex = String(++sandboxTopZ);   // pull to the front
+        vp.setPointerCapture(pid);
+      });
+
+      vp.addEventListener("pointermove", e => {
+        if (!dragging || !heldCell || e.pointerId !== pid) return;
+        const dx = e.clientX - lastX, dy = e.clientY - lastY;
+        lastX = e.clientX; lastY = e.clientY;
+        moved += Math.abs(dx) + Math.abs(dy);
+
+        const nx = parseFloat(heldCell.dataset.sx || 0) + dx;
+        const ny = parseFloat(heldCell.dataset.sy || 0) + dy;
+        heldCell.dataset.sx = nx;
+        heldCell.dataset.sy = ny;
+        heldCell.style.left = nx + "px";
+        heldCell.style.top  = ny + "px";
+      });
+
+      function endDrag(e) {
+        if (!dragging || (pid !== null && e.pointerId !== pid)) return;
+        dragging = false;
+        if (heldCell) { heldCell.classList.remove("is-dragging"); heldCell = null; }
+        if (pid !== null && vp.hasPointerCapture(pid)) vp.releasePointerCapture(pid);
+        pid = null;
+      }
+      vp.addEventListener("pointerup", endDrag);
+      vp.addEventListener("pointercancel", endDrag);
+
+      // Moving an image must not also open the lightbox. Capture phase so
+      // this runs before the cell's own click handler, and 6px of slop keeps
+      // a genuine click working.
+      vp.addEventListener("click", e => {
+        if (active() && moved > 6) { e.stopPropagation(); e.preventDefault(); }
+      }, true);
+    }
+
+    /* ── ORBIT ────────────────────────────────────────────────────────
+     * Every image as a small circular thumb on one or more concentric
+     * rings; whatever is hovered blooms up in the middle. With nothing
+     * hovered the centre drifts through the archive on its own so the
+     * page is never dead.
+     * ─────────────────────────────────────────────────────────────── */
+    let orbitTimer = null, orbitIndex = 0, orbitHovering = false, orbitInnerR = 160;
+
+    /* Largest rectangle of a given aspect ratio that fits inside a circle of
+       radius R:  w = 2R·a/√(1+a²),  h = 2R/√(1+a²)   where a = w/h.
+       Deriving it per-image is what keeps a 3.76:1 panorama and a square both
+       sitting exactly inside the ring instead of one of them spilling.
+
+       The ratio fitted is the CONTENT's, not the file's: an image padded with
+       transparency would otherwise have its padding fitted to the circle and
+       the artwork itself come out smaller and off-centre. The element is then
+       scaled up past the circle by exactly its own margins and shifted so the
+       content's centre lands on the centre of the stage. */
+    function fitOrbitMedia(el, ratio, bb) {
+      bb = bb || { x: 0, y: 0, w: 1, h: 1 };
+      const R = orbitInnerR;
+      const a = (bb.w / bb.h) / (ratio || 1);   // content aspect, w/h
+      const k = Math.sqrt(1 + a * a);
+      const iw = (2 * R * a / k) / bb.w;        // whole file, content-fitted
+      const ih = (2 * R / k) / bb.h;
+      el.style.width  = iw + "px";
+      el.style.height = ih + "px";
+      el.style.left   = (R - (bb.x + bb.w / 2) * iw) + "px";
+      el.style.top    = (R - (bb.y + bb.h / 2) * ih) + "px";
+      // Bloom outward from the artwork's centre. On a padded image that isn't
+      // the element's centre, and scaling about the wrong point makes the
+      // picture drift sideways as it grows.
+      el.style.transformOrigin =
+        ((bb.x + bb.w / 2) * 100) + "% " + ((bb.y + bb.h / 2) * 100) + "%";
+    }
+
+    function orbitLayout() {
+      const grid = document.getElementById("archive-grid");
+      if (!grid || !archiveCells.length) return;
+
+      grid.style.width = "";
+      grid.style.transform = "";
+
+      /* Ring capacity is planned for the FINAL image count, not the count
+         loaded so far. Otherwise every image that arrives re-rings the whole
+         set — 51 layouts each moving 51 thumbs, with everything already on
+         screen sliding to a new angle each time. Planning ahead means an
+         arriving image simply drops into its own slot and nothing else moves. */
+      const n     = (SITE_MANIFEST && SITE_MANIFEST.archive && SITE_MANIFEST.archive.length)
+                    || archiveCells.length;
+      const W     = grid.offsetWidth;
+      const size  = Math.max(300, Math.min(W, window.innerHeight - 190));
+      /* Ring plan. Two rules the layout has to respect at any archive size:
+         the centre preview keeps a guaranteed minimum radius, and every image
+         gets a slot of its own.
+
+         Thumb size therefore can't be fixed. With a fixed size the rings run
+         out of room — at this viewport, capacity peaked around 100 images and
+         everything past that silently piled up on top of itself. So: lay out
+         at the preferred size, and if it doesn't fit, shrink and try again.
+         That holds well past 400 images. */
+      const MIN_CENTRE = size * 0.20;
+      let THUMB = Math.max(26, Math.min(52, size * 0.07));
+      let GAP   = 10;
+      let radii = [];
+
+      for (let attempt = 0; attempt < 20; attempt++) {
+        GAP = Math.max(6, THUMB * 0.2);            // smaller thumbs pack tighter
+        const STEP = THUMB + GAP + 6;
+        const R0   = size / 2 - THUMB / 2 - 4;
+        radii = [];
+        let cap = 0;
+        for (let r = R0; r >= MIN_CENTRE + THUMB / 2; r -= STEP) {
+          radii.push(r);
+          cap += Math.floor((2 * Math.PI * r) / (THUMB + GAP));
+          if (cap >= n) break;
+        }
+        if (cap >= n || THUMB <= 12) break;
+        THUMB *= 0.86;
+      }
+      if (!radii.length) radii = [Math.max(THUMB, size / 2 - THUMB / 2 - 4)];
+
+      /* Share the items out in proportion to each ring's circumference.
+         Filling greedily from the outside instead leaves a stray two or three
+         orbiting alone on an inner ring, and that nearly empty ring is what
+         caps the centre preview's size. */
+
+      const totalR = radii.reduce((s, rr) => s + rr, 0) || 1;
+      const rings  = radii.map(rr => ({ r: rr, take: Math.max(1, Math.round(n * rr / totalR)) }));
+
+      // Rounding can leave the shares a couple over or under — walk the rings
+      // and even it out so exactly n thumbs get placed.
+      let sum = rings.reduce((s, x) => s + x.take, 0), guard = 0;
+      while (sum !== n && guard++ < 200) {
+        const t = rings[guard % rings.length];
+        if (sum > n && t.take > 1) { t.take--; sum--; }
+        else if (sum < n) { t.take++; sum++; }
+      }
+
+      const cx = W / 2, cy = size / 2;
+      let idx = 0;
+      rings.forEach((ring, ri) => {
+        const step   = (2 * Math.PI) / ring.take;
+        const offset = -Math.PI / 2 + (ri % 2 ? step / 2 : 0);   // stagger alternate rings
+        for (let k = 0; k < ring.take; k++) {
+          const cell = archiveCells[idx++];
+          if (!cell) break;
+          const a = offset + k * step;
+          cell.style.width  = THUMB + "px";
+          cell.style.height = THUMB + "px";
+          cell.style.left   = (cx + Math.cos(a) * ring.r - THUMB / 2) + "px";
+          cell.style.top    = (cy + Math.sin(a) * ring.r - THUMB / 2) + "px";
+          cell.style.removeProperty("--rot");
+
+          /* Cover the circle with the image's real content, not with the file.
+             Scale so the smaller side of the content still spans the thumb,
+             then shift so the content's centre — not the file's — sits at the
+             centre of the disc. For an image with no transparent padding this
+             reduces exactly to object-fit: cover. */
+          const media = cell.querySelector("img, video");
+          if (media) {
+            const bb = contentBox(cell);
+            const r  = cellRatio(cell);                       // natural h/w
+            const iw = THUMB / Math.min(bb.w, bb.h * r);      // displayed image width
+            const ih = iw * r;
+            media.style.width  = iw + "px";
+            media.style.height = ih + "px";
+            media.style.left   = (THUMB / 2 - (bb.x + bb.w / 2) * iw) + "px";
+            media.style.top    = (THUMB / 2 - (bb.y + bb.h / 2) * ih) + "px";
+          }
+        }
+      });
+
+      grid.style.height = size + "px";
+
+      /* The clear space inside the innermost ring is a CIRCLE, so the stage
+         is sized as a square that spans it and the media inside is fitted to
+         the circle per-image (see fitOrbitMedia). Sizing the media to the
+         square instead is what makes a wide image bleed out over the thumbs:
+         a square's corners sit 1.41× further from the centre than its edges. */
+      orbitInnerR = (rings.length ? rings[rings.length - 1].r - THUMB / 2 - 16 : size / 2) * 0.94;
+      const stageS = Math.max(150, orbitInnerR * 2);
+      const stage  = ensureOrbitStage(grid);
+      stage.style.width  = stageS + "px";
+      stage.style.height = stageS + "px";
+      stage.style.left   = (cx - stageS / 2) + "px";
+      stage.style.top    = (cy - stageS / 2) + "px";
+
+      if (!stage.dataset.filled) {
+        orbitShow(0);
+      } else {
+        // Already showing something: the radius may have changed, but redoing
+        // the whole swap would clear and reset is-active across every cell —
+        // 51 class writes for each of the 51 images that load. Just re-fit.
+        const shown = stage.querySelector(".is-showing");
+        const cell  = archiveCells[orbitIndex];
+        if (shown && cell) fitOrbitMedia(shown, cellRatio(cell), contentBox(cell));
+      }
+      if (!orbitTimer) orbitStartIdle();   // don't rebuild the timer per image
+    }
+
+    function ensureOrbitStage(grid) {
+      let stage = grid.querySelector(".orbit-stage");
+      if (!stage) {
+        stage = document.createElement("div");
+        stage.className = "orbit-stage";
+        stage.setAttribute("aria-hidden", "true");
+        stage.innerHTML =
+          '<img alt=""><video muted loop playsinline></video><span class="orbit-caption"></span>';
+        grid.appendChild(stage);
+      }
+      return stage;
+    }
+
+    function orbitShow(i) {
+      const grid = document.getElementById("archive-grid");
+      if (!grid || !archiveCells.length) return;
+      orbitIndex = (i + archiveCells.length) % archiveCells.length;
+      const cell = archiveCells[orbitIndex];
+      if (!cell) return;
+
+      const stage = ensureOrbitStage(grid);
+      const img   = stage.querySelector("img");
+      const vid   = stage.querySelector("video");
+      const cap   = stage.querySelector(".orbit-caption");
+      const src   = cell.dataset.src || "";
+      const isVid = cell.dataset.kind === "video";
+
+      archiveCells.forEach(c => c.classList.remove("is-active"));
+      cell.classList.add("is-active");
+
+      const ratio = cellRatio(cell);
+      const bb    = contentBox(cell);
+
+      // Re-run the bloom even when the element is unchanged. Re-applying an
+      // animation whose name hasn't changed does nothing, so it has to be
+      // cleared and forced through a reflow before being handed back.
+      const replay = el => {
+        el.style.animation = "none";
+        void el.offsetWidth;
+        el.style.animation = "";
+      };
+
+      if (isVid) {
+        if (vid.getAttribute("src") !== src) { vid.src = src; vid.play().catch(() => {}); }
+        fitOrbitMedia(vid, ratio, bb);
+        vid.classList.add("is-showing");
+        img.classList.remove("is-showing");
+        replay(vid);
+      } else {
+        if (img.getAttribute("src") !== src) img.src = src;
+        fitOrbitMedia(img, ratio, bb);
+        img.classList.add("is-showing");
+        vid.classList.remove("is-showing");
+        vid.pause();
+        replay(img);
+      }
+
+      const num = src.match(/(\d+)\.[a-z0-9]+$/i);
+      cap.textContent = num ? num[1] : "";
+      stage.dataset.filled = "1";
+    }
+
+    function orbitStartIdle() {
+      orbitStopIdle();
+      orbitTimer = setInterval(() => {
+        if (archiveMode !== "orbit" || currentPage !== "archive") return orbitStopIdle();
+        if (!orbitHovering) orbitShow(orbitIndex + 1);
+      }, 2600);
+    }
+    function orbitStopIdle() {
+      if (orbitTimer) { clearInterval(orbitTimer); orbitTimer = null; }
+    }
+
+    function initOrbitControls() {
+      const grid = document.getElementById("archive-grid");
+      if (!grid || grid.dataset.orbitBound) return;
+      grid.dataset.orbitBound = "1";
+
+      grid.addEventListener("pointerover", e => {
+        if (archiveMode !== "orbit") return;
+        const cell = e.target.closest(".archive-img");
+        if (!cell) return;
+        const i = archiveCells.indexOf(cell);
+        if (i < 0) return;
+        orbitHovering = true;
+        orbitShow(i);
+      });
+      grid.addEventListener("pointerleave", () => { orbitHovering = false; });
+    }
+
+    /* ── Mode switching ─────────────────────────────────────────────── */
+    let modeSwapTimer = null;
+
+    /* Park the sliding marker on the active label. Measured from the live
+       layout rather than hard-coded, so it stays correct whatever the labels
+       say and whichever font has finished loading. */
+    function positionModeThumb(animate) {
+      const wrap = document.querySelector(".archive-modes");
+      if (!wrap) return;
+      const on = wrap.querySelector(".archive-mode-btn.is-on");
+      // A hidden element measures as zero — off the archive page there's
+      // nothing to place, and renderNav calls back once the pill is shown.
+      if (!on || !on.offsetWidth) return;
+      if (!animate) wrap.classList.add("no-anim");
+      wrap.style.setProperty("--thumb-x", on.offsetLeft + "px");
+      wrap.style.setProperty("--thumb-w", on.offsetWidth + "px");
+      if (!animate) requestAnimationFrame(() => wrap.classList.remove("no-anim"));
+    }
+
+    // Label widths shift when the webfont swaps in or the window resizes;
+    // re-measure so the marker never drifts off its label.
+    window.addEventListener("resize", () => positionModeThumb(false));
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => positionModeThumb(false));
+    }
+
+    function applyArchiveMode(mode) {
+      const grid = document.getElementById("archive-grid");
+      if (!grid) return;
+
+      if (mode && ARCHIVE_MODES.includes(mode)) {
+        archiveModePref = mode;
+        try { localStorage.setItem("archiveMode", mode); } catch (e) {}
+      }
+      // What actually runs may differ from the preference on a narrow screen.
+      const next     = effectiveMode();
+      const changing = next !== archiveMode;
+      archiveMode    = next;
+
+      // The switch updates straight away — pressing it should register
+      // instantly even though the grid takes a couple of hundred ms.
+      document.querySelectorAll(".archive-mode-btn").forEach(b => {
+        const on = b.dataset.mode === archiveMode;
+        b.classList.toggle("is-on", on);
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+      positionModeThumb(changing);   // slide on a real switch, jump otherwise
+
+      // Re-asserting the current mode (after a render) shouldn't
+      // flash — only a genuine switch fades.
+      if (!changing) { commitArchiveMode(); return; }
+
+      clearTimeout(modeSwapTimer);
+      grid.classList.add("is-swapping", "no-morph");
+      modeSwapTimer = setTimeout(() => {
+        commitArchiveMode();
+        // Paint the new positions before fading back in, then restore the
+        // position transitions once the fade is over.
+        requestAnimationFrame(() => {
+          grid.classList.remove("is-swapping");
+          modeSwapTimer = setTimeout(() => grid.classList.remove("no-morph"), 170);
+        });
+      }, 140);
+    }
+
+    function commitArchiveMode() {
+      const grid = document.getElementById("archive-grid");
+      const vp   = document.getElementById("archive-viewport");
+      if (!grid || !vp) return;
+
+      ARCHIVE_MODES.forEach(m => grid.classList.toggle("mode-" + m, m === archiveMode));
+      vp.classList.toggle("is-sandbox", archiveMode === "sandbox");
+      // Drives the page-level bits that sit outside the viewport itself.
+      document.documentElement.classList.toggle(
+        "archive-sandbox", archiveMode === "sandbox" && currentPage === "archive");
+
+      if (archiveMode !== "sandbox") {
+        grid.style.transform = "";
+        grid.style.width = "";
+        // Sandbox and Orbit both position each image inside its cell with
+        // inline styles, to crop out transparent margins. Grid sizes its media
+        // from CSS, so those have to be handed back or they'd be stuck.
+        archiveCells.forEach(c => {
+          const m = c.querySelector("img, video");
+          if (m) { m.style.width = ""; m.style.height = ""; m.style.left = ""; m.style.top = ""; }
+        });
+      } else {
+        initSandboxControls();
+      }
+      if (archiveMode === "orbit") initOrbitControls();
+      else {
+        orbitStopIdle();
+        archiveCells.forEach(c => c.classList.remove("is-active"));
+        // The centre stage is hidden by CSS, but a hidden <video> keeps
+        // decoding — stop it rather than leave it burning frames.
+        const sv = grid.querySelector(".orbit-stage video");
+        if (sv) sv.pause();
+      }
+
+      // The idle wiggle only belongs to the masonry grid — in Sandbox it
+      // fights the rotation, in Orbit it fights the hover bloom.
+      if (archiveMode === "masonry" && currentPage === "archive") startArchiveWiggle();
+      else stopArchiveWiggle();
+
+      archiveLayout();
+    }
+
+    document.querySelectorAll(".archive-mode-btn").forEach(btn => {
+      btn.addEventListener("click", e => {
+        e.stopPropagation();          // don't trigger the pill's "go home"
+        if (btn.dataset.mode === archiveMode) return;
+        applyArchiveMode(btn.dataset.mode);
+      });
+    });
 
     function initCdSpin(cell, img) {
       const FULL_SPEED  = 360 / 8000; // deg/ms — one full rotation per 8 s
@@ -3369,6 +4296,18 @@
 
       function tick(now) {
         if (prev === null) { prev = now; raf = requestAnimationFrame(tick); return; }
+
+        // Outside the masonry grid this record must stop driving its own
+        // transform — Sandbox needs that property for rotation and Orbit for
+        // the hover bloom, and a per-frame write would win against both.
+        // The loop keeps idling so the spin resumes on the way back.
+        if (archiveMode !== "masonry") {
+          img.style.transform = "";
+          prev = now;
+          raf = requestAnimationFrame(tick);
+          return;
+        }
+
         const dt = now - prev;
         prev = now;
 
@@ -3437,8 +4376,6 @@
           if (!grid) return;
           grid.classList.add("layout-settled");
           startArchiveWiggle();
-          const shuffleWrap = document.querySelector(".archive-shuffle-wrap");
-          if (shuffleWrap) requestAnimationFrame(() => shuffleWrap.classList.add("visible"));
         }, 600);
       }
 
@@ -3447,50 +4384,76 @@
          strictly one-after-another. ─────────────────────────────────── */
       const mfArchive = SITE_MANIFEST && SITE_MANIFEST.archive;
       if (mfArchive && mfArchive.length) {
-        const list = mfArchive.slice();
-        for (let i = list.length - 1; i > 0; i--) {          // shuffle
-          const j = Math.floor(Math.random() * (i + 1));
-          [list[i], list[j]] = [list[j], list[i]];
-        }
+        const list = mfArchive;   // manifest is written in numeric order already
+
+        /* Every cell is built up front, in file order, before any loading
+           starts. Creating them as their images finished instead — which is
+           what the old code did — meant the running order was decided by
+           which file happened to download first, so 6 concurrent loads would
+           never come back in numbered sequence. Building first also means the
+           manifest's dimensions drive the layout from the very first frame,
+           so nothing reflows as pictures land. */
+        list.forEach(entry => {
+          const isVideo = entry.type === "video";
+          let node;
+          if (isVideo) {
+            node = document.createElement("video");
+            node.autoplay = true; node.loop = true; node.muted = true; node.playsInline = true;
+            node.setAttribute("aria-hidden", "true");
+          } else {
+            node = new Image();
+            node.alt = ""; node.setAttribute("aria-hidden", "true"); node.decoding = "async";
+          }
+          if (entry.w && entry.h) { node.width = entry.w; node.height = entry.h; }
+
+          const cell = document.createElement("div");
+          cell.className = "archive-img";
+          cell.dataset.src  = entry.src;
+          cell.dataset.kind = isVideo ? "video" : "image";
+          // Known before the file arrives, so layout is right immediately.
+          if (entry.w && entry.h) { cell.dataset.mw = entry.w; cell.dataset.mh = entry.h; }
+          cell.appendChild(node);
+          cell.addEventListener("click", () => {
+            // Orbit shows the picture in the middle already — opening the
+            // lightbox on top of it would just cover what you're looking at.
+            if (archiveMode === "orbit") return;
+            openLightbox(entry.src, isVideo ? "#1a1a1a" : "#d4d4d4");
+          });
+          archiveCells.push(cell);
+          grid.appendChild(cell);
+          if (/\/06\.[a-z0-9]+$/i.test(entry.src) && !isVideo) {
+            cell.classList.add("cd-spin"); initCdSpin(cell, node);
+          }
+        });
+        shuffleArchiveOrder(archiveCells.length);
+        scheduleArchiveLayout();
 
         let started = 0, finished = 0;
         const CONCURRENCY = 6;
 
-        function place(node, entry, isVideo) {
-          if (gen !== archiveGen) return;
-          const cell = document.createElement("div");
-          cell.className = "archive-img";
-          cell.appendChild(node);
-          cell.addEventListener("click", () => openLightbox(entry.src, isVideo ? "#1a1a1a" : "#d4d4d4"));
-          archiveCells.push(cell);
-          grid.appendChild(cell);
-          scheduleMasonry();
-          if (/\/06\.[a-z0-9]+$/i.test(entry.src) && !isVideo) { cell.classList.add("cd-spin"); initCdSpin(cell, node); }
-          cell.classList.add("cascade-in");
-        }
-
         function pump() {
           while (started < list.length && (started - finished) < CONCURRENCY) {
-            const entry = list[started++];
-            const done = () => { finished++; if (finished >= list.length) settle(); else pump(); };
+            const i     = started++;
+            const entry = list[i];
+            const cell  = archiveCells[i];
+            const node  = cell && cell.firstChild;
+            const done = () => {
+              if (gen !== archiveGen) return;
+              finished++;
+              if (cell) cell.classList.add("cascade-in");   // reveal this one
+              scheduleArchiveLayout();   // re-measure now the real pixels exist
+              if (finished >= list.length) settle(); else pump();
+            };
+            if (!node) { done(); continue; }
 
             if (entry.type === "video") {
-              const v = document.createElement("video");
-              v.autoplay = true; v.loop = true; v.muted = true; v.playsInline = true;
-              v.setAttribute("aria-hidden", "true");
-              v.style.cssText = "width:100%;height:auto;display:block;";
-              if (entry.w && entry.h) { v.width = entry.w; v.height = entry.h; }
-              v.onloadedmetadata = () => { place(v, entry, true); done(); };
-              v.onerror = done;
-              v.src = entry.src;
+              node.onloadeddata = () => { node.play().catch(() => {}); done(); };
+              node.onerror = done;
             } else {
-              const img = new Image();
-              img.alt = ""; img.setAttribute("aria-hidden", "true"); img.decoding = "async";
-              if (entry.w && entry.h) { img.width = entry.w; img.height = entry.h; }
-              img.onload  = () => { place(img, entry, false); done(); };
-              img.onerror = done;
-              img.src = entry.src;
+              node.onload  = done;
+              node.onerror = done;
             }
+            node.src = entry.src;
           }
         }
         pump();
@@ -3499,11 +4462,7 @@
 
       /* ── SLOW PATH (fallback) — guess numbers and see what exists ──── */
       const order = [];
-      for (let i = 1; i <= 80; i++) order.push(i);
-      for (let i = order.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [order[i], order[j]] = [order[j], order[i]];
-      }
+      for (let i = 1; i <= 80; i++) order.push(i);   // numeric order, no shuffle
 
       let idx = 0;
 
@@ -3516,10 +4475,6 @@
             if (grid) {
               grid.classList.add("layout-settled");
               startArchiveWiggle();
-              const shuffleWrap = document.querySelector(".archive-shuffle-wrap");
-              if (shuffleWrap) {
-                requestAnimationFrame(() => shuffleWrap.classList.add("visible"));
-              }
             }
           }, 600);
           return;
@@ -3543,11 +4498,16 @@
           if (gen !== archiveGen) return;
           const cell = document.createElement("div");
           cell.className = "archive-img";
+          cell.dataset.src = img.src;
+          cell.dataset.kind = "image";
           cell.appendChild(img);
-          cell.addEventListener("click", () => openLightbox(img.src, "#d4d4d4"));
+          cell.addEventListener("click", () => {
+            if (archiveMode === "orbit") return;
+            openLightbox(img.src, "#d4d4d4");
+          });
           archiveCells.push(cell);
           grid.appendChild(cell);
-          scheduleMasonry();
+          scheduleArchiveLayout();
           if (num === "06") { cell.classList.add("cd-spin"); initCdSpin(cell, img); }
           cell.classList.add("cascade-in");
           loadNext();
@@ -3578,11 +4538,16 @@
             if (gen !== archiveGen) return;
             const cell = document.createElement("div");
             cell.className = "archive-img";
+            cell.dataset.src = video.src;
+            cell.dataset.kind = "video";
             cell.appendChild(video);
-            cell.addEventListener("click", () => openLightbox(video.src, "#1a1a1a"));
+            cell.addEventListener("click", () => {
+              if (archiveMode === "orbit") return;
+              openLightbox(video.src, "#1a1a1a");
+            });
             archiveCells.push(cell);
             grid.appendChild(cell);
-            scheduleMasonry();
+            scheduleArchiveLayout();
             cell.classList.add("cascade-in");
             loadNext();
           };
@@ -3655,9 +4620,9 @@
     }
 
     let masonryRaf = null;
-    function scheduleMasonry() {
+    function scheduleArchiveLayout() {
       if (!masonryRaf) {
-        masonryRaf = requestAnimationFrame(() => { masonryRaf = null; masonryLayout(); });
+        masonryRaf = requestAnimationFrame(() => { masonryRaf = null; archiveLayout(); });
       }
     }
 
@@ -3665,7 +4630,13 @@
     let resizeTimer;
     window.addEventListener("resize", () => {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(masonryLayout, 100);
+      resizeTimer = setTimeout(() => {
+        // Crossing the breakpoint changes which mode is allowed to run, so a
+        // window dragged narrow has to fall back to masonry (and widening it
+        // again restores the chosen mode).
+        if (effectiveMode() !== archiveMode) applyArchiveMode();
+        else archiveLayout();
+      }, 100);
     });
 
     /* ════════════════════════════════════════════════════════════════
@@ -3703,9 +4674,9 @@
       const items = Array.from(document.querySelectorAll(sel))
         .filter(el => el.tagName === "VIDEO" ? el.videoWidth > 0 : el.naturalWidth > 0);
 
-      // Archive uses a shuffled masonry layout — DOM order (file numbers)
-      // doesn't match what's on screen. Sort by visual position so the
-      // lightbox arrows step through reading order (top → bottom, left → right).
+      // Masonry reflows file order into columns, so DOM order doesn't match
+      // what's on screen. Sort by visual position so the lightbox arrows step
+      // through reading order (top → bottom, left → right).
       if (items.some(el => el.closest('.archive-img'))) {
         items.sort((a, b) => {
           const ar = a.getBoundingClientRect();
