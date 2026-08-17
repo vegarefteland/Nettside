@@ -22,7 +22,7 @@
        list of which images exist, that shows the old set: new pictures
        missing, deleted ones still there. Must match the fetch below exactly,
        or the preload is thrown away and the file is fetched twice. -->
-  <link rel="preload" as="fetch" href="images/manifest.json?v=20260816195853" crossorigin>
+  <link rel="preload" as="fetch" href="images/manifest.json?v=20260818001625" crossorigin>
   <link rel="preload" as="image" href="images/projects/01/cover.webp" fetchpriority="high">
   <link rel="preload" as="image" href="images/projects/03/cover.webp" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -149,7 +149,7 @@
     // The version below is rewritten on every commit by the pre-commit hook;
     // keep it identical to the preload href in <head> or the browser treats
     // them as two different files and downloads it twice.
-    var MANIFEST_V = "20260816195853";
+    var MANIFEST_V = "20260818001625";
     window.__manifest = fetch("images/manifest.json?v=" + MANIFEST_V)
       .then(r => r.ok ? r.json() : null)
       .catch(() => null);
@@ -159,7 +159,26 @@
   <style>
     /* ─── Reset ─────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
+    /* Lenis drives smooth scrolling now (see vendor/lenis.min.js). Native
+       scroll-behavior has to be off or the two fight over the same scroll
+       position. Reduced-motion users get no Lenis and no native smoothing,
+       which is the point. */
+    html { scroll-behavior: auto; }
+
+    /* From lenis.css, inlined to keep it to one request. */
+    html.lenis, html.lenis body { height: auto; }
+    .lenis:not(.lenis-autoToggle).lenis-stopped { overflow: clip; }
+    .lenis [data-lenis-prevent],
+    .lenis [data-lenis-prevent-wheel],
+    .lenis [data-lenis-prevent-touch],
+    .lenis [data-lenis-prevent-vertical],
+    .lenis [data-lenis-prevent-horizontal] { overscroll-behavior: contain; }
+    .lenis.lenis-smooth iframe { pointer-events: none; }
+    .lenis.lenis-autoToggle {
+      transition-property: overflow;
+      transition-duration: 1ms;
+      transition-behavior: allow-discrete;
+    }
     img, video { display: block; }
     a { text-decoration: none; }
 
@@ -1268,16 +1287,13 @@
       background-image:
         linear-gradient(to right,  var(--sandbox-grid-line) 1px, transparent 1px),
         linear-gradient(to bottom, var(--sandbox-grid-line) 1px, transparent 1px);
-      background-size: 52px 52px;
-      /* Strongest in the middle, gone well before the edges. The ending shape
-         is sized to the SHORTER axis (70% of the box) rather than the longer
-         one — on a wide screen a circle scaled to the width still has plenty
-         of ink left at the top and bottom edges, which is what left visible
-         lines in the corners. */
-      -webkit-mask-image: radial-gradient(70% 70% at 50% 48%,
-        #000 0%, rgba(0,0,0,0.75) 40%, rgba(0,0,0,0.28) 70%, transparent 100%);
-      mask-image: radial-gradient(70% 70% at 50% 48%,
-        #000 0%, rgba(0,0,0,0.75) 40%, rgba(0,0,0,0.28) 70%, transparent 100%);
+      /* Cell size is computed from the viewport (see sizeSandboxGrid) so a
+         whole number of columns fits exactly — a fixed size leaves a sliver
+         of a column at the right edge, which is what makes a backdrop grid
+         look accidental. The vertical remainder is split top and bottom so
+         the pattern sits centred in the frame. */
+      background-size: var(--grid-cell, 52px) var(--grid-cell, 52px);
+      background-position: 0 var(--grid-offset-y, 0px);
     }
 
     /* Filed images are only out of sight inside the sandbox. The folder is a
@@ -1296,9 +1312,9 @@
       left: 22px;
       bottom: 22px;
       width: 104px;
-      /* 104 / (120/96) — matches the SVG viewBox ratio exactly, so the folder
+      /* 104 / (120/112) — matches the SVG viewBox ratio exactly, so the folder
          fills its box instead of being letterboxed inside it. */
-      height: 83px;
+      height: 97px;
       z-index: 8;              /* above every resting cell (1–7), below a dragged one (10+) */
       display: none;
       cursor: pointer;
@@ -1340,7 +1356,7 @@
       position: absolute;
       left: 16%;
       right: 16%;
-      bottom: 30%;
+      bottom: 34%;
       height: 34px;
       pointer-events: none;
     }
@@ -1409,6 +1425,101 @@
 
     @media (prefers-reduced-motion: reduce) {
       .sandbox-folder, .folder-items img { animation: none; transition: none; }
+    }
+
+    /* ── Handwritten notes ──────────────────────────────────────────
+       The source art is white ink on transparent, which would vanish on a
+       light page. Used as a mask instead, with --fg painted through it, so
+       the writing is dark on light and light on dark with one asset.
+
+       The masks are inlined as data URIs rather than linked. mask-image is
+       CORS-checked, and opening index.html straight off disk gives every file
+       an opaque origin — so a linked mask is treated as cross-origin, blocked,
+       and the element paints nothing. That's why these were invisible over
+       file:// while working fine over http. A data URI is same-origin by
+       definition, so it works either way. Only the alpha channel is read, so
+       the colour data is compressed away to almost nothing: ~10 KB for both.
+       Source files are kept in images/notes/ for re-editing.
+       Sized in vmin so they scale with the frame rather than sitting at a
+       fixed pixel size on a large monitor. */
+    .note {
+      position: absolute;
+      z-index: 2;                 /* over the grid, under the pile */
+      pointer-events: none;
+      display: none;
+    }
+    /* The handwriting is painted by ::before rather than by .note itself.
+       mask-image masks an element AND its descendants, so with the mask on
+       the box, anything placed inside it — the strike-through — would be
+       cut away by the handwriting's own alpha. ::before keeps the ink and
+       the box separate, which leaves the box free to hold children. */
+    .note::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--fg);
+      opacity: 0.85;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-size: contain;
+      mask-size: contain;
+    }
+    .archive-viewport.is-sandbox .note { display: block; }
+
+    .note-todo {
+      top: 88px;
+      right: 40px;
+      width: clamp(225px, 25.5vmin, 359px);
+      aspect-ratio: 460 / 352;
+    }
+    .note-todo::before {
+      -webkit-mask-image: url("data:image/webp;base64,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");
+      mask-image: url("data:image/webp;base64,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");
+    }
+    /* Sits just up and right of the folder, so the arrow lands on it. */
+    .note-here {
+      left: 132px;
+      bottom: 118px;
+      width: clamp(179px, 20.9vmin, 285px);
+      aspect-ratio: 419 / 209;
+    }
+    .note-here::before {
+      -webkit-mask-image: url("data:image/webp;base64,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");
+      mask-image: url("data:image/webp;base64,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");
+    }
+    /* Crossing off item 1 once every image is in the folder. This is the
+       same pen as the note itself — a scan of the drawn line, stored the
+       same way (white on transparent, only the alpha is ever read).
+       Position is a percentage of the note box, measured against the note
+       scan's own 340x260 pixel grid: the line runs from (48,171) to
+       (335,124), which is the centreline of "Clean up sandbox".
+       mask-size is 100% 100% rather than contain on purpose — stretching
+       the line into a box slightly wider than its natural aspect flattens
+       its slope onto the text's, and thins the stroke to match the
+       handwriting's weight. */
+    .strike-todo {
+      position: absolute;
+      left: 14.1%;
+      top: 47.7%;
+      width: 84.4%;
+      height: 18.1%;
+      background: var(--fg);
+      opacity: 0.85;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-size: 100% 100%;
+      mask-size: 100% 100%;
+      -webkit-mask-image: url("data:image/webp;base64,UklGRj4DAABXRUJQVlA4WAoAAAAQAAAAHwEAOQAAQUxQSJ8CAAARb6CgbRsWl8HdiYhAcs3t/EwJOdu2p26jkys/QLJLoynpHL46hpONaWXYGEcudzJ3DTieQy6OzZEKc/T8m7NKV8eI/its27apOlTlE/EfQ3IuXynWeWPWPJ4PAVPvgyUDuXkXagDKgfMr0TN7V+oGMF9qr8ed/6uua22hhtGv+zIpx6tU3cehBTBX021KOD7rmj+9qIQAlAttscBpU6plM/dIBPNF7z8RbqOaLiqaKOWliXRL4PKRR7vbtRAArauL43XCaWT31qUFwOjScmtLXLiNbL6JFszbvlQgHEd2H99pAF3ZaUs7X4SYiRa+LqeU+zOZnMtZwFT3ep4IDzCSvbcA5Y544L7J5rGcBfhy2u+BIuTIRU1HbCrtAWtqnb+1kXI1+cT9Irs2f2kitpSJOW/J5NGtjZY3E3Hnixw7vLuPmHk7lQ5cnyVbjm+J8OVqudfxIjt7TvL3OmrV3YaYcJtk+7kliq72jdc5Xpp6Tu4MgLHFwkRLzPEiR7dCAMyXt43jgXCdZPeFBdDVQnvc/SISMw9EWEkFwn3kcP7BAqYy3eoDE8mzRwDztkN5oMiW9csQMFcD8cAHNnuhLcDXjpgHSmL06C5aTsefCA8wfBsCUD5tDDxgibG8BUyt1OuDIudab3XEJlMxD1hTzy0GzJdSoxI+IHGrAfNlMhPzgiWbDwCqjcoHRamj0/vQfi3VduNesOb7GoB+ESgPmOw6eROC0Xq/LfCAqa4bC5gvr1IpH5g8qmigHA42+KCIxNwZgNmvT3qhdB8/AOjiy0D4gNU7DfB5O618YLIp/whQXHwuvMBI9gGgvKi8YHIjb4EvlcnAC9a1cWkB9jPKCzZ0GgLo4lQg/MBPALPbo4Qv+Iep7TUIj/DpzUS6TvzPAABWUDggeAAAADAJAJ0BKiABOgA/zeLrbb+3sSoofygD8DmJaW7gn5AD4tC2VWTN5jOWKvK9/cOr6VkEv/SGZAUZRQtkt/Y197sqwTt0WyqydGkLZVZaFsqssgAA/undBPes9EjrBg6/BrzT4fEWSvK4P//Fpz32Ec1n3OM8AAAAAA==");
+      mask-image: url("data:image/webp;base64,UklGRj4DAABXRUJQVlA4WAoAAAAQAAAAHwEAOQAAQUxQSJ8CAAARb6CgbRsWl8HdiYhAcs3t/EwJOdu2p26jkys/QLJLoynpHL46hpONaWXYGEcudzJ3DTieQy6OzZEKc/T8m7NKV8eI/its27apOlTlE/EfQ3IuXynWeWPWPJ4PAVPvgyUDuXkXagDKgfMr0TN7V+oGMF9qr8ed/6uua22hhtGv+zIpx6tU3cehBTBX021KOD7rmj+9qIQAlAttscBpU6plM/dIBPNF7z8RbqOaLiqaKOWliXRL4PKRR7vbtRAArauL43XCaWT31qUFwOjScmtLXLiNbL6JFszbvlQgHEd2H99pAF3ZaUs7X4SYiRa+LqeU+zOZnMtZwFT3ep4IDzCSvbcA5Y544L7J5rGcBfhy2u+BIuTIRU1HbCrtAWtqnb+1kXI1+cT9Irs2f2kitpSJOW/J5NGtjZY3E3Hnixw7vLuPmHk7lQ5cnyVbjm+J8OVqudfxIjt7TvL3OmrV3YaYcJtk+7kliq72jdc5Xpp6Tu4MgLHFwkRLzPEiR7dCAMyXt43jgXCdZPeFBdDVQnvc/SISMw9EWEkFwn3kcP7BAqYy3eoDE8mzRwDztkN5oMiW9csQMFcD8cAHNnuhLcDXjpgHSmL06C5aTsefCA8wfBsCUD5tDDxgibG8BUyt1OuDIudab3XEJlMxD1hTzy0GzJdSoxI+IHGrAfNlMhPzgiWbDwCqjcoHRamj0/vQfi3VduNesOb7GoB+ESgPmOw6eROC0Xq/LfCAqa4bC5gvr1IpH5g8qmigHA42+KCIxNwZgNmvT3qhdB8/AOjiy0D4gNU7DfB5O618YLIp/whQXHwuvMBI9gGgvKi8YHIjb4EvlcnAC9a1cWkB9jPKCzZ0GgLo4lQg/MBPALPbo4Qv+Iep7TUIj/DpzUS6TvzPAABWUDggeAAAADAJAJ0BKiABOgA/zeLrbb+3sSoofygD8DmJaW7gn5AD4tC2VWTN5jOWKvK9/cOr6VkEv/SGZAUZRQtkt/Y197sqwTt0WyqydGkLZVZaFsqssgAA/undBPes9EjrBg6/BrzT4fEWSvK4P//Fpz32Ec1n3OM8AAAAAA==");
+      /* Wipes on left to right, as if it were being drawn. */
+      clip-path: inset(0 100% 0 0);
+      transition: clip-path 620ms cubic-bezier(.4, 0, .2, 1);
+    }
+    .note-todo.is-done .strike-todo { clip-path: inset(0 0 0 0); }
+
+    @media (max-width: 700px) {
+      .note-todo { top: 74px; right: 16px; width: 191px; }
+      .note-here { left: 108px; bottom: 96px; width: 156px; }
     }
 
     /* The archive blurb would otherwise sit behind the full-screen pile. */
@@ -2040,6 +2151,12 @@
       margin: 0 auto;
       line-height: 0;   /* no inline-descender gap under the video */
     }
+    /* A clip with no _player in its name has no player UI, in the lightbox
+       as everywhere else. The controls are built once and reused for every
+       clip, so they're hidden per-item rather than never built. Matching on
+       "not the video" rather than by name keeps this true if another control
+       is added later. */
+    #lightbox-video-wrap.no-player > :not(video) { display: none; }
 
     /* ── Centre play/pause, for *_player.mp4 only ────────────────────
        These carry sound, so they load paused rather than autoplaying — the
@@ -2945,7 +3062,7 @@
             </div>
             <div class="info-section">
               <p class="info-label">Last Updated</p>
-              <p class="info-text"><!--LAST_UPDATED-->Aug 16. 2026<!--/LAST_UPDATED--></p>
+              <p class="info-text"><!--LAST_UPDATED-->Aug 18. 2026<!--/LAST_UPDATED--></p>
             </div>
             <p class="info-version">v3.0</p>
           </div>
@@ -3022,19 +3139,23 @@
         <!-- Both panels are stroked with a round linejoin rather than plain
              filled: that rounds the corners *and* the angled tab, which
              border-radius cannot do on a diagonal edge. -->
-        <svg class="folder-back" viewBox="0 0 120 96" aria-hidden="true">
-          <path d="M16 78 V24 H45 L55 34 H104 V78 Z"
+        <svg class="folder-back" viewBox="0 0 120 112" aria-hidden="true">
+          <path d="M16 96 V22 H45 L55 34 H104 V96 Z"
                 stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
         </svg>
         <span class="folder-items" aria-hidden="true"></span>
-        <svg class="folder-front" viewBox="0 0 120 96" aria-hidden="true">
-          <path class="fld-seam" d="M16 78 V48 H104 V78 Z"
+        <svg class="folder-front" viewBox="0 0 120 112" aria-hidden="true">
+          <path class="fld-seam" d="M16 96 V56 H104 V96 Z"
                 stroke-width="19" stroke-linejoin="round" stroke-linecap="round"/>
-          <path class="fld-face" d="M16 78 V48 H104 V78 Z"
+          <path class="fld-face" d="M16 96 V56 H104 V96 Z"
                 stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
         </svg>
         <span class="folder-count" aria-hidden="true">0</span>
       </div>
+      <!-- Handwritten notes. Sandbox only; drawn as masks so the ink takes
+           the theme colour rather than being stuck white. -->
+      <div class="note note-todo" aria-hidden="true"><i class="strike-todo"></i></div>
+      <div class="note note-here" aria-hidden="true"></div>
       <div class="sandbox-hint" aria-hidden="true">drag the images around</div>
     </div>
   </section>
@@ -3124,7 +3245,55 @@
 
 
   <script src="content.js"></script>
+  <!-- Plain (not deferred) so window.Lenis exists by the time the script
+       below runs — that one executes at parse time, right here. -->
+  <script src="vendor/lenis.min.js"></script>
   <script>
+
+    /* ════════════════════════════════════════════════════════════════
+     * SMOOTH SCROLLING (Lenis)
+     * ════════════════════════════════════════════════════════════════
+     * Lenis eases the scroll position rather than transforming the page,
+     * so position: sticky (the project page's left column) and the
+     * IntersectionObservers that drive the image reveals keep working
+     * untouched.
+     *
+     * Two site behaviours have to route through it rather than around it:
+     * anything that jumps the page (scrollToTop), and anything that locks
+     * the body while an overlay is open (lockScroll). Setting
+     * body.overflow alone no longer stops a scroll — Lenis keeps running
+     * its own loop on top of it.
+     *
+     * Touch is left native on purpose: smoothing it costs more than it
+     * gives on a phone, and it breaks momentum scrolling. */
+    const smoothScroll = (function () {
+      // Anyone who has asked the OS for less motion gets the plain browser
+      // scroll — which is also why scroll-behavior is `auto` in the CSS.
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return null;
+      if (typeof Lenis === "undefined") return null;   // vendor file missing
+      return new Lenis({
+        lerp: 0.11,          // a touch quicker than the 0.1 default; less floaty
+        smoothWheel: true,
+        syncTouch: false,    // native momentum on touch devices
+        autoRaf: true,       // Lenis drives its own rAF loop
+        anchors: true,       // in-page #links ease instead of jumping
+      });
+    })();
+
+    /* Jump or ease to the top. Lenis owns the scroll position when it's
+       running, so window.scrollTo would be fought over and lose. */
+    function scrollToTop(smooth) {
+      if (smoothScroll) smoothScroll.scrollTo(0, { immediate: !smooth });
+      else window.scrollTo({ top: 0, behavior: smooth ? "smooth" : "auto" });
+    }
+
+    /* Freeze the page behind an overlay (lightbox, focus mode). */
+    function lockScroll(locked) {
+      document.body.style.overflow = locked ? "hidden" : "";
+      if (!smoothScroll) return;
+      if (locked) smoothScroll.stop();
+      else smoothScroll.start();
+    }
 
     /* ════════════════════════════════════════════════════════════════
      * NAVIGATION
@@ -3196,7 +3365,11 @@
       }
 
       renderNav();
-      window.scrollTo(0, 0);
+      scrollToTop(false);
+      // A page swap replaces the whole document body, so Lenis' idea of how
+      // far the page scrolls is stale until its ResizeObserver fires. That
+      // lands a frame or two later; measuring here removes the gap.
+      if (smoothScroll) smoothScroll.resize();
     }
 
     // Idle wiggle — randomly pick one archive image at a time
@@ -3239,7 +3412,7 @@
       }, { threshold: 0.1 });
       backToTopObs.observe(el);
       el.querySelector(".back-to-top-btn").addEventListener("click", () => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        scrollToTop(true);
       });
     }
 
@@ -4535,10 +4708,26 @@
       const vp   = document.getElementById("archive-viewport");
       if (!grid || !vp || !archiveCells.length) return;
 
+      /* Wait for the viewport to actually BE the sandbox. archiveMode flips
+         the moment the switch is pressed, but .is-sandbox — which makes the
+         viewport a fixed 100vh — only lands when the fade commits 140ms
+         later. A layout in between (an image finishing its load, say) would
+         measure the tall masonry plane and cache positions hundreds of pixels
+         below the fold, where they'd stay, because positions are cached. */
+      if (!vp.classList.contains("is-sandbox")) return;
+
       const planeW = vp.clientWidth;
       const planeH = vp.clientHeight;
       grid.style.width  = planeW + "px";
       grid.style.height = planeH + "px";
+
+      /* Keep the pile a full grid cell in from every edge, so nothing spills
+         over the outer ruled line. Sizing the grid first guarantees the cell
+         figure is current for this viewport rather than the previous one. */
+      sizeSandboxGrid();
+      const M = parseFloat(getComputedStyle(vp).getPropertyValue("--grid-cell")) || 56;
+      const usableW = Math.max(1, planeW - M * 2);
+      const usableH = Math.max(1, planeH - M * 2);
 
       const seed = archiveGen * 13;   // new scatter per render, stable on resize
 
@@ -4570,6 +4759,8 @@
       }
       const hits = (z, x, y, w, h) =>
         z && x < z.x1 && x + w > z.x0 && y < z.y1 && y + h > z.y0;
+      // Deliberately NOT protecting the handwritten notes: images landing over
+      // them is part of the look — it's a desk, and things get covered.
       const hitsZone = (x, y, w, h) =>
         hits(zone, x, y, w, h) || hits(fzone, x, y, w, h);
 
@@ -4587,7 +4778,9 @@
       const ratio = cells.map((cell, i) =>
         cellRatio(cell) * (boxes[i].h / boxes[i].w));
       const denom = cells.reduce((s, _, i) => s + f[i] * f[i] * ratio[i], 0) || 1;
-      const base  = Math.sqrt(COVER * planeW * planeH / denom);
+      // Against the usable area, not the full frame — insetting by a cell on
+      // each side would otherwise quietly raise the density.
+      const base  = Math.sqrt(COVER * usableW * usableH / denom);
 
       cells.forEach((cell, i) => {
         if (cell.dataset.filed) return;   // it's in the folder
@@ -4612,15 +4805,49 @@
         // Read back a dragged position if there is one; otherwise scatter.
         // Placement allows a little bleed off each edge so the pile reads as
         // continuing past the frame rather than being neatly contained.
+        const rot = (seededRand(i, seed + 4) - 0.5) * 14;    // ±7°
+        const scl = 0.92 + seededRand(i, seed + 5) * 0.16;   // 0.92–1.08
+
         let x = cell.dataset.sx, y = cell.dataset.sy;
+
+        /* A position cached at one viewport width doesn't hold at another —
+           the whole box has to be re-checked against the margin, not just its
+           top-left corner, or a piece placed near the right edge of a wide
+           window hangs off a narrow one.
+
+           Only auto-placed pieces are corrected. Anything dragged is the
+           visitor's own arrangement, and re-rolling it on the next layout
+           would quietly undo what they just did. */
+        if (x !== undefined && !cell.dataset.moved) {
+          const px = parseFloat(x), py = parseFloat(y);
+          const inside = px >= M - 1 && py >= M - 1 &&
+                         px + w <= planeW - M + 1 && py + h <= planeH - M + 1;
+          if (!inside) {
+            x = undefined; y = undefined;
+            delete cell.dataset.sx; delete cell.dataset.sy;
+          }
+        }
         if (x === undefined || y === undefined) {
-          // Re-roll until the piece misses the hint label. Fresh salt each
-          // attempt, so the sequence stays deterministic but doesn't retry
-          // the same spot. If it never finds one, lift it clear above.
+          /* Fully inside the one-cell margin. The inset has to use the piece's
+             VISUAL box, not its layout box: each cell is rotated and scaled
+             about its centre, so it covers more ground than w × h and would
+             poke over the outer line by the difference. For a w × h rect
+             turned by θ and scaled by s the visual box is
+                s·(w·|cos θ| + h·|sin θ|)  by  s·(w·|sin θ| + h·|cos θ|)
+             and the overflow is half of that on each side. */
+          const rad  = rot * Math.PI / 180;
+          const ca   = Math.abs(Math.cos(rad)), sa = Math.abs(Math.sin(rad));
+          const padX = (scl * (w * ca + h * sa) - w) / 2;
+          const padY = (scl * (w * sa + h * ca) - h) / 2;
+          const spanX = Math.max(0, usableW - w - padX * 2);
+          const spanY = Math.max(0, usableH - h - padY * 2);
+          // Re-roll until the piece misses the hint label and the folder.
+          // Fresh salt each attempt, so the sequence stays deterministic but
+          // doesn't retry the same spot.
           let t = 0;
           do {
-            x = -w * 0.15 + seededRand(i, seed + 2 + t * 17) * (planeW - w * 0.7);
-            y = -h * 0.15 + seededRand(i, seed + 3 + t * 17) * (planeH - h * 0.7);
+            x = M + padX + seededRand(i, seed + 2 + t * 17) * spanX;
+            y = M + padY + seededRand(i, seed + 3 + t * 17) * spanY;
             t++;
           } while (t < 24 && hitsZone(x, y, w, h));
           if (hitsZone(x, y, w, h)) {
@@ -4631,13 +4858,11 @@
             if (hits(zone,  x, y, w, h)) tops.push(zone.y0);
             if (hits(fzone, x, y, w, h)) tops.push(fzone.y0);
             if (tops.length) y = Math.min(y, Math.min.apply(null, tops) - h);
+            y = Math.max(M + padY, y);   // never lift it past the top margin
           }
           cell.dataset.sx = x;
           cell.dataset.sy = y;
         }
-
-        const rot = (seededRand(i, seed + 4) - 0.5) * 14;    // ±7°
-        const scl = 0.92 + seededRand(i, seed + 5) * 0.16;   // 0.92–1.08
 
         cell.style.width  = w + "px";   // height was set above, from the content box
         cell.style.left   = parseFloat(x) + "px";
@@ -4659,6 +4884,25 @@
     let folderSeq = 0;              // filing order, which array order is not
 
     function folderEl() { return document.getElementById("sandbox-folder"); }
+
+    /* Size the backdrop grid to the viewport. Cells stay square and divide
+       the WIDTH exactly, so no half-column is left hanging at the right edge;
+       the leftover height is split evenly top and bottom so the pattern is
+       centred rather than starting flush at the top and running out at the
+       bottom. A fixed cell size is what makes a backdrop grid look like it
+       was dropped on rather than built for the frame. */
+    function sizeSandboxGrid() {
+      const vp = document.getElementById("archive-viewport");
+      if (!vp) return;
+      const w = vp.clientWidth, h = vp.clientHeight;
+      if (!w || !h) return;
+      const TARGET = 56;                                  // roughly this big
+      const cols = Math.max(4, Math.round(w / TARGET));
+      const cell = w / cols;                              // exact division
+      const rows = Math.max(1, Math.round(h / cell));
+      vp.style.setProperty("--grid-cell", cell.toFixed(3) + "px");
+      vp.style.setProperty("--grid-offset-y", ((h - rows * cell) / 2).toFixed(3) + "px");
+    }
 
     function isOverFolder(x, y) {
       const f = folderEl();
@@ -4733,6 +4977,16 @@
       layoutFolderItems();
       f.querySelector(".folder-count").textContent = filed.length;
       f.classList.toggle("has-items", filed.length > 0);
+
+      // Sandbox clean → item 1 gets crossed off. Every route in and out of
+      // the folder ends up here, so this is the only place it needs saying.
+      const todo = document.querySelector(".note-todo");
+      if (todo) {
+        todo.classList.toggle(
+          "is-done",
+          archiveCells.length > 0 && filed.length === archiveCells.length
+        );
+      }
     }
 
     function fileIntoFolder(cell) {
@@ -4882,6 +5136,7 @@
         const ny = parseFloat(heldCell.dataset.sy || 0) + dy;
         heldCell.dataset.sx = nx;
         heldCell.dataset.sy = ny;
+        heldCell.dataset.moved = "1";   // yours now; layout won't reposition it
         heldCell.style.left = nx + "px";
         heldCell.style.top  = ny + "px";
         const overF = folderEl();
@@ -5193,6 +5448,7 @@
     // track width, so a resize would otherwise leave the thumbs spread for
     // the previous size and hanging outside the folder.
     window.addEventListener("resize", () => layoutFolderItems());
+    window.addEventListener("resize", sizeSandboxGrid);
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(() => positionModeThumb(false));
     }
@@ -5259,6 +5515,7 @@
       } else {
         initSandboxControls();
         initFolder();
+        sizeSandboxGrid();
       }
       if (archiveMode === "orbit") initOrbitControls();
       else {
@@ -5676,6 +5933,15 @@
     const lightboxVideo = document.getElementById("lightbox-video");
     const lightboxVideoWrap = document.getElementById("lightbox-video-wrap");
 
+    /* Only *_player.mp4 ever gets a player UI. Everything else is decorative
+       motion — silent, looping, no controls — and that holds in the lightbox
+       too. The inline paths gate on the manifest's `sound` flag, but the
+       lightbox can be handed a bare src (an archive clip, a project cover),
+       so here it has to be read back off the filename. */
+    function isPlayerClip(src) {
+      return /_player\.[a-z0-9]+(?:[?#]|$)/i.test(src || "");
+    }
+
     /* The lightbox gets the same player as the project pages: centre
        play/pause, replay and sound. No fullscreen button — this *is* the
        fullscreen view. Built once, on first use, then reused for every clip. */
@@ -5737,9 +6003,16 @@
       lightboxWrap.style.animation = "";
 
       if (item && item.src && item.type === "video") {
-        ensureLightboxPlayer();
+        const withPlayer = isPlayerClip(item.src);
+        if (withPlayer) ensureLightboxPlayer();
+        if (lightboxVideoWrap) {
+          lightboxVideoWrap.classList.toggle("no-player", !withPlayer);
+          lightboxVideoWrap.style.display = "block";
+        }
+        // The element is shared, so a clip that was unmuted through the
+        // player would otherwise carry its sound over to the next silent one.
+        if (!withPlayer) { lightboxVideo.muted = true; lightboxVideo.loop = true; }
         lightboxVideo.src = item.src;
-        if (lightboxVideoWrap) lightboxVideoWrap.style.display = "block";
         lightboxVideo.play().catch(() => {});
       } else if (item && item.src) {
         lightboxImg.src = "";
@@ -5784,14 +6057,14 @@
       lbReturnFocus = document.activeElement;
       showLightboxItem(lbIndex);
       lightbox.classList.add("open");
-      document.body.style.overflow = "hidden";
+      lockScroll(true);
       // Move focus into the dialog for keyboard / screen-reader users
       lightboxClose.focus({ preventScroll: true });
     }
 
     function closeLightbox() {
       lightbox.classList.remove("open");
-      document.body.style.overflow = "";
+      lockScroll(false);
       lightboxVideo.pause();
       lightboxVideo.src = "";
       // Restore focus to whatever opened the lightbox
@@ -6266,13 +6539,13 @@
       if (!focusScroll.children.length) return;
 
       focusOverlay.classList.add("open");
-      document.body.style.overflow = "hidden";
+      lockScroll(true);
       focusCloseBtn.focus({ preventScroll: true });
     }
 
     function closeFocusMode() {
       focusOverlay.classList.remove("open");
-      document.body.style.overflow = "";
+      lockScroll(false);
       // Pause any videos to stop buffering
       focusScroll.querySelectorAll("video").forEach(v => v.pause());
       const btn = document.getElementById("focus-btn");
