@@ -58,7 +58,7 @@ const SITE = {
       wip: false,
       year: "2025–2026",
       description:
-        "Selection of motion and animation projects, made in school and personal work contexts.\n\n\n<strong>(01) Showreel</strong>\n\nPromotional video showcasing motion and design work.\n\nTools Used: After Effects, Premiere Pro & Photoshop\n\n\n<strong>(02) Animation Course — Group Project</strong>\n\nSelected scene of my part in a group final assignment.\n\nIn collaboration with Jonathan Kindingstad & Elias Olai Skog\n\nTools used: After Effects, Premiere Pro, Photoshop & InDesign",
+        "Selection of motion and animation projects, made in school and personal work contexts.\n\n\n<strong>(01) Showreel</strong>\n\nPromotional video showcasing motion and design work.\n\nSoftware Used: After Effects, Premiere Pro & Photoshop\n\n\n<strong>(02) Animation Course — Group Project</strong>\n\nSelected scene of my part in a group final assignment.\n\nIn collaboration with Jonathan Kindingstad & Elias Olai Skog\n\nSoftware used: After Effects, Premiere Pro, Photoshop & InDesign",
     },
     {
       title: "Modular Desk Interface – 3D Modeling",
