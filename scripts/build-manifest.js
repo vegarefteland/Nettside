@@ -141,7 +141,11 @@ function findPoster(dir, relDir, num) {
   return null;
 }
 
-// A "row" folder: NN/ containing 01.<img>, 02.<img> …
+// A "row" folder: NN/ containing 01, 02 … side by side.
+// Rows started out images-only, so items carried no `type` and the site
+// assumed one. A row can hold a clip just as a sequence can, so the type is
+// stated here — same rule as readSequence, silent unless it's a _player file
+// (which findNumbered doesn't match inside a row).
 function readRow(absDir, relDir) {
   const items = [];
   for (let i = 1; ; i++) {
@@ -149,7 +153,9 @@ function readRow(absDir, relDir) {
     if (!name) break;
     const abs = path.join(absDir, name);
     const d = measure(abs) || {};
-    items.push({ src: `${relDir}/${name}`, w: d.w || null, h: d.h || null });
+    const isVid = VID_EXT.includes(path.extname(name).toLowerCase());
+    items.push({ type: isVid ? "video" : "image", src: `${relDir}/${name}`,
+                 w: d.w || null, h: d.h || null });
   }
   return items;
 }

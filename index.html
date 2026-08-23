@@ -22,7 +22,7 @@
        list of which images exist, that shows the old set: new pictures
        missing, deleted ones still there. Must match the fetch below exactly,
        or the preload is thrown away and the file is fetched twice. -->
-  <link rel="preload" as="fetch" href="images/manifest.json?v=20260818202343" crossorigin>
+  <link rel="preload" as="fetch" href="images/manifest.json?v=20260823190053" crossorigin>
   <link rel="preload" as="image" href="images/projects/01/cover.webp" fetchpriority="high">
   <link rel="preload" as="image" href="images/projects/03/cover.webp" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -149,7 +149,7 @@
     // The version below is rewritten on every commit by the pre-commit hook;
     // keep it identical to the preload href in <head> or the browser treats
     // them as two different files and downloads it twice.
-    var MANIFEST_V = "20260818202343";
+    var MANIFEST_V = "20260823190053";
     window.__manifest = fetch("images/manifest.json?v=" + MANIFEST_V)
       .then(r => r.ok ? r.json() : null)
       .catch(() => null);
@@ -3066,7 +3066,7 @@
             </div>
             <div class="info-section">
               <p class="info-label">Last Updated</p>
-              <p class="info-text"><!--LAST_UPDATED-->Aug 18. 2026<!--/LAST_UPDATED--></p>
+              <p class="info-text"><!--LAST_UPDATED-->Aug 23. 2026<!--/LAST_UPDATED--></p>
             </div>
             <p class="info-version">v3.0</p>
           </div>
@@ -3870,7 +3870,10 @@
           const ratios = rowEntry.items.map(s => (s.w && s.h) ? (s.w / s.h) : 1);
           rowGrid.style.gridTemplateColumns = ratios.map(r => r + "fr").join(" ");
           parent.appendChild(rowGrid);
-          rowEntry.items.forEach(s => addItem({ ...s, type: "image" }, rowGrid, "project-img-item"));
+          // Fall back to "image" only when the manifest predates rows
+          // carrying a type — forcing it here rendered a clip into an <img>,
+          // which silently fails to decode.
+          rowEntry.items.forEach(s => addItem({ ...s, type: s.type || "image" }, rowGrid, "project-img-item"));
           return rowGrid;
         }
 
@@ -4113,21 +4116,35 @@
 
         const ratios = [];   // aspect ratios for each image in this row
 
-        function addSubItem(img) {
+        // <img> or <video> — a row slot can be either.
+        function addSubItem(media) {
           clearSkeleton();
+          const isVid = media.tagName === "VIDEO";
           const item = document.createElement("div");
           item.className = "project-img-item";
-          img.alt = "";
-          img.loading = "eager";
-          img.decoding = "async";
-          item.appendChild(img);
+          if (isVid) {
+            const wrap = document.createElement("div");
+            wrap.className = "video-wrap";
+            wrap.appendChild(media);
+            item.appendChild(wrap);
+            item.style.cursor = "zoom-in";
+          } else {
+            media.alt = "";
+            media.loading = "eager";
+            media.decoding = "async";
+            item.appendChild(media);
+          }
           item.classList.add("loaded");
           item.dataset.revealIdx = revealIndex++;
-          item.addEventListener("click", () => openLightbox(img.src, "#d4d4d4"));
+          item.addEventListener("click", () => openLightbox(
+            media.getAttribute("src"), isVid ? "#1a1a1a" : "#d4d4d4",
+            isVid ? "video" : "image"));
           rowGrid.appendChild(item);
           if (projRevealObs) projRevealObs.observe(item);
-          // Size columns by aspect ratio so all images share the same height
-          ratios.push(img.naturalWidth / img.naturalHeight);
+          // Size columns by aspect ratio so everything shares the same height
+          const w = isVid ? media.videoWidth  : media.naturalWidth;
+          const h = isVid ? media.videoHeight : media.naturalHeight;
+          ratios.push((w && h) ? w / h : 1);
           rowGrid.style.gridTemplateColumns = ratios.map(r => r + "fr").join(" ");
         }
 
@@ -4143,13 +4160,24 @@
           img.onerror = () => {
             sFmt++;
             if (sFmt < sFormats.length) img.src = `${subBase}${sFormats[sFmt]}`;
-            else {
-              // No more sub-images — row is complete, move to next project item
-              if (rowGrid.children.length === 0) rowGrid.remove();
-              loadNextProjectItem();
-            }
+            else trySubVideo();
           };
           img.src = `${subBase}${sFormats[0]}`;
+
+          // A row slot can hold a clip, so only give up once .mp4 misses too.
+          function trySubVideo() {
+            const v = document.createElement("video");
+            v.autoplay = true; v.muted = true; v.loop = true;
+            v.setAttribute("playsinline", "");
+            v.setAttribute("preload", "metadata");
+            v.addEventListener("loadedmetadata", () => { addSubItem(v); loadNextSubItem(); }, { once: true });
+            v.addEventListener("error", () => {
+              // No more sub-items — row is complete, move to next project item
+              if (rowGrid.children.length === 0) rowGrid.remove();
+              loadNextProjectItem();
+            }, { once: true });
+            v.src = `${subBase}.mp4`;
+          }
         }
 
         addSubItem(firstImg); // add the probe image (already loaded)
@@ -4207,6 +4235,11 @@
           wrap.className = "video-wrap";
           wrap.appendChild(video);
           item.appendChild(wrap);
+          // Matches the manifest path: a silent clip has no controls of its
+          // own, so clicking it opens the lightbox like an image would.
+          item.style.cursor = "zoom-in";
+          item.addEventListener("click", () =>
+            openLightbox(video.getAttribute("src"), "#1a1a1a", "video"));
           return item;
         }
 
@@ -4242,18 +4275,35 @@
           const ratios = [];
           let subIdx = 1; // firstImg is already 01; start probing from 02
 
-          function addSub(img) {
+          // Takes an <img> or a <video>: a row slot can be either, same as a
+          // sequence slot. Column widths come from the media's own aspect so
+          // everything in the row shares one height.
+          function addSub(media) {
             clearSkeleton();
+            const isVid = media.tagName === "VIDEO";
             const item = document.createElement("div");
             item.className = "project-img-item";
-            img.alt = ""; img.loading = "eager"; img.decoding = "async";
-            item.appendChild(img);
+            if (isVid) {
+              const wrap = document.createElement("div");
+              wrap.className = "video-wrap";
+              wrap.appendChild(media);
+              item.appendChild(wrap);
+              // Silent clip: no controls, click to open — same as everywhere else.
+              item.style.cursor = "zoom-in";
+            } else {
+              media.alt = ""; media.loading = "eager"; media.decoding = "async";
+              item.appendChild(media);
+            }
             item.classList.add("loaded");
             item.dataset.revealIdx = revealIndex++;
-            item.addEventListener("click", () => openLightbox(img.src, "#d4d4d4"));
+            item.addEventListener("click", () => openLightbox(
+              media.getAttribute("src"), isVid ? "#1a1a1a" : "#d4d4d4",
+              isVid ? "video" : "image"));
             rowGrid.appendChild(item);
             if (projRevealObs) projRevealObs.observe(item);
-            ratios.push(img.naturalWidth / img.naturalHeight);
+            const w = isVid ? media.videoWidth  : media.naturalWidth;
+            const h = isVid ? media.videoHeight : media.naturalHeight;
+            ratios.push((w && h) ? w / h : 1);
             rowGrid.style.gridTemplateColumns = ratios.map(r => r + "fr").join(" ");
           }
 
@@ -4268,9 +4318,25 @@
             img.onerror = () => {
               f++;
               if (f < gFormats.length) img.src = `${sBase}${gFormats[f]}`;
-              else { if (rowGrid.children.length === 0) rowGrid.remove(); nextItem(); }
+              else trySubVideo();
             };
             img.src = `${sBase}${gFormats[0]}`;
+
+            // Only after every image format has missed — a row slot may hold
+            // a clip. Without this the row simply ended at the last image and
+            // the video was never requested.
+            function trySubVideo() {
+              const v = document.createElement("video");
+              v.autoplay = true; v.muted = true; v.loop = true;
+              v.setAttribute("playsinline", "");
+              v.setAttribute("preload", "metadata");
+              v.addEventListener("loadedmetadata", () => { addSub(v); nextSub(); }, { once: true });
+              v.addEventListener("error", () => {
+                if (rowGrid.children.length === 0) rowGrid.remove();
+                nextItem();
+              }, { once: true });
+              v.src = `${sBase}.mp4`;
+            }
           }
 
           addSub(firstImg);
