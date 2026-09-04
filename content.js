@@ -19,15 +19,14 @@ const SITE = {
    * ────────────────────────────────────────────────────────────── */
   projects: [
     {
-      title: "F1 – Team Merch",
-      folder: "01",
-      cover: "images/projects/01/cover.webp",
-      color: "#C8B8A2",
+       title: "Knurr Display © Typeface",
+      folder: "06",
+      cover: "images/projects/06/cover.mp4",
+      color: "#E8E0D5",
       wip: false,
-      year: "2025–2026",
+      year: "2026",
       description:
-        "Ongoing personal project.\n\n" +
-        "Designing retro inspired formula 1 merch for every team on the grid.",
+        "Knurr Display is a module-based display typeface developed during a visual communication course at the University of Bergen. Every letter is built from a skeleton of connected nodes, giving the family a systematic, constructed logic paired with an organic, hand drawn expression.\n\nThe typeface comes in two versions, Knurr and Knurr Node, each in three styles: Regular, Regular Italic and Regular Italic+. Knurr Node exposes the underlying system by cutting negative holes where each node begins and ends, reading as more mechanical and structural than the softer, closed forms of Knurr Regular. The Italic+ styles push the slant and connections further for a more energetic display setting.\n\n\nSoftware used: Glyphs 4, InDesign & Photoshop",
     },
     {
        title: "Arboretet – Visual Identity",
@@ -73,14 +72,15 @@ const SITE = {
         "Modeled and rendered in Blender.",
     },
     {
-      title: "Personal Branding",
-      folder: "06",
-      cover: "images/projects/06/cover.webp",
-      color: "#F0EBE3",
+      title: "F1 – Team Merch",
+      folder: "01",
+      cover: "images/projects/01/cover.webp",
+      color: "#C8B8A2",
       wip: false,
-      year: "2025",
+      year: "2025–2026",
       description:
-        "Personal branding project.",
+        "Ongoing personal project.\n\n" +
+        "Designing retro inspired formula 1 merch for every team on the grid.",
     },
   ],
 

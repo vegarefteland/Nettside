@@ -22,7 +22,7 @@
        list of which images exist, that shows the old set: new pictures
        missing, deleted ones still there. Must match the fetch below exactly,
        or the preload is thrown away and the file is fetched twice. -->
-  <link rel="preload" as="fetch" href="images/manifest.json?v=20260823190243" crossorigin>
+  <link rel="preload" as="fetch" href="images/manifest.json?v=20260904230337" crossorigin>
   <link rel="preload" as="image" href="images/projects/01/cover.webp" fetchpriority="high">
   <link rel="preload" as="image" href="images/projects/03/cover.webp" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -149,7 +149,7 @@
     // The version below is rewritten on every commit by the pre-commit hook;
     // keep it identical to the preload href in <head> or the browser treats
     // them as two different files and downloads it twice.
-    var MANIFEST_V = "20260823190243";
+    var MANIFEST_V = "20260904230337";
     window.__manifest = fetch("images/manifest.json?v=" + MANIFEST_V)
       .then(r => r.ok ? r.json() : null)
       .catch(() => null);
@@ -244,7 +244,7 @@
       --sheen:        rgba(255, 255, 255, 0.16);
       --sheen-strong: rgba(255, 255, 255, 0.34);
       --placeholder:#1e1e1e;
-      --hover-shadow: 0 0 20px rgba(255, 255, 255, 0.12);
+      --hover-shadow: 0 0 14px rgba(255, 255, 255, 0.055);
     }
 
     /* Custom mode — its own theme. JS sets --bg/--nav-bg from the picker,
@@ -3002,6 +3002,7 @@
           <div class="entry"><span>After Effects</span></div>
           <div class="entry"><span>Premiere Pro</span></div>
           <div class="entry"><span>Blender</span></div>
+          <div class="entry"><span>Glyphs 4</span></div>
         </div>
 
         <div class="section-block">
@@ -3066,7 +3067,7 @@
             </div>
             <div class="info-section">
               <p class="info-label">Last Updated</p>
-              <p class="info-text"><!--LAST_UPDATED-->Aug 23. 2026<!--/LAST_UPDATED--></p>
+              <p class="info-text"><!--LAST_UPDATED-->Sep 4. 2026<!--/LAST_UPDATED--></p>
             </div>
             <p class="info-version">v3.0</p>
           </div>
@@ -3942,9 +3943,22 @@
           probe.onerror = () => {
             subFmt++;
             if (subFmt < subFormats.length) probe.src = `${base}/01${subFormats[subFmt]}`;
-            else loadNormalItem();
+            else probeRowVideo();
           };
           probe.src = `${base}/01${subFormats[0]}`;
+
+          // Same as inside a group: the row's first slot may be a clip.
+          function probeRowVideo() {
+            const v = document.createElement("video");
+            v.autoplay = true; v.muted = true; v.loop = true;
+            v.setAttribute("playsinline", "");
+            v.setAttribute("preload", "metadata");
+            v.addEventListener("loadedmetadata", () => {
+              clearSkeleton(); projMisses = 0; loadSubfolderRow(base, v);
+            }, { once: true });
+            v.addEventListener("error", () => loadNormalItem(), { once: true });
+            v.src = `${base}/01.mp4`;
+          }
         }
 
         function loadNormalItem() {
@@ -4360,9 +4374,23 @@
           rowProbe.onerror = () => {
             subFmt++;
             if (subFmt < formats.length) rowProbe.src = `${itemBase}/01${formats[subFmt]}`;
-            else tryVideo();
+            else tryRowVideo();
           };
           rowProbe.src = `${itemBase}/01${formats[0]}`;
+
+          // A row can *open* with a clip (e.g. 05/01.mp4). Giving up on the
+          // image formats alone cost more than the video: a slot matching
+          // nothing ends the whole group scan, so every item after it went
+          // missing too.
+          function tryRowVideo() {
+            const v = document.createElement("video");
+            v.autoplay = true; v.muted = true; v.loop = true;
+            v.setAttribute("playsinline", "");
+            v.setAttribute("preload", "metadata");
+            v.addEventListener("loadedmetadata", () => loadGroupRow(itemBase, v), { once: true });
+            v.addEventListener("error", () => tryVideo(), { once: true });
+            v.src = `${itemBase}/01.mp4`;
+          }
 
           // 2) Single video (kk.mp4)
           function tryVideo() {
@@ -6535,21 +6563,31 @@
       const right = document.getElementById("project-right");
       if (!right || !right.children.length) return;
 
-      // Helper: clone a single media element for focus view
+      // Helper: clone a single media element for focus view.
+      //
+      // Videos need dataset.src as well as src. Off-screen clips are created
+      // with preload="none" and no src at all — the URL sits in dataset.src
+      // until videoHydrator swaps it in on approach. Reading only el.src
+      // therefore cloned an empty <video> for every clip the reader hadn't
+      // scrolled near yet, which is why some showed and some didn't. Images
+      // don't have this problem: they carry src from the start and lazy-load
+      // natively.
       function cloneMedia(el) {
         if (el.tagName === "IMG") {
           const img = document.createElement("img");
-          img.src = el.src;
+          img.src = el.currentSrc || el.src || el.dataset.src || "";
           img.alt = el.alt || "";
           img.draggable = false;
           return img;
         } else {
           const vid = document.createElement("video");
-          vid.src = el.src;
+          const src = el.currentSrc || el.getAttribute("src") || el.dataset.src || "";
+          if (el.getAttribute("poster")) vid.poster = el.getAttribute("poster");
           vid.autoplay = true;
           vid.loop = true;
           vid.muted = true;
           vid.playsInline = true;
+          if (src) vid.src = src;
           return vid;
         }
       }
